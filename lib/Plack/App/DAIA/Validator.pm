@@ -188,6 +188,9 @@ HTML
 This module provides a simple L<DAIA> validator and converter as PSGI web
 application.
 
+To support fetching from DAIA Servers via HTTPS you might need to install
+L<LWP::Protocol::https> version 6.02 or higher.
+
 =head1 CONFIGURATION
 
 All configuration parameters (C<xsd>, C<xslt>, and C<warnings>) are optional.
