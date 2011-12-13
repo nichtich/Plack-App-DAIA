@@ -6,10 +6,16 @@ package Plack::App::DAIA;
 use parent 'Plack::Component';
 use LWP::Simple qw(get);
 use Encode;
-use DAIA;
+use JSON;
+use DAIA '0.35';
 
 use Plack::Util::Accessor qw(xsd xslt warnings);
 use Plack::Request;
+
+sub prepare_app {
+    my $self = shift;
+    $self->warnings(1) unless defined $self->warnings;
+}
 
 sub call {
     my ($self, $env) = @_;
@@ -19,7 +25,9 @@ sub call {
     $id = "" unless defined $id;
     my $format = lc($req->param('format')) || "";
 
-    # TODO: do content negotiation if DAIA/RDF is enabled and no format was specified
+    if (!$format) {
+        # TODO: try content negotiation if DAIA/RDF is enabled
+    }
     
     my $daia = $self->retrieve( $id );
     my $status = 200;
@@ -47,7 +55,11 @@ sub as_psgi {
 
     my ($type, $content);
 
-    if ( $format eq 'json' ) {
+    if ( $format eq 'rdfjson' and $DAIA::VERSION >= 0.35 ) {
+        $type    = "application/javascript; charset=utf-8";
+        $content = JSON->new->pretty->encode($daia->rdfhash);
+        # TODO: other serializations
+    } elsif ( $format eq 'json' ) {
         $type    = "application/javascript; charset=utf-8";
         $content = $daia->json( $callback );
     
@@ -87,7 +99,44 @@ sub as_psgi {
 This module implements a L<DAIA> server as PSGI application. It provides 
 serialization in DAIA/XML and DAIA/JSON and automatically adds some warnings
 and error messages. The core functionality must be implemented by deriving
-from this class and implementing the method C<retrieve>.
+from this class and implementing the method C<retrieve>. The following
+serialization formats are supported:
+
+=over 4
+
+=item xml
+
+DAIA/XML format (default)
+
+=item json
+
+DAIA/JSON format
+
+=item rdfjson
+
+DAIA/RDF in RDF/JSON.
+
+=back
+
+=method new ( [%options] )
+
+Creates a new DAIA server. Known options are
+
+=over 4
+
+=item xslt
+
+Path of a DAIA XSLT client to attach to DAIA/XML responses.
+
+=item xsd
+
+Path of a DAIA XML Schema to validate DAIA/XML response.
+
+=item warnings
+
+Enable warnings in the DAIA response (enabled by default).
+
+=back
 
 =method retrieve ( $id )
 
