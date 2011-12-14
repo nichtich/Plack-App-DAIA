@@ -18,6 +18,8 @@ use Plack::App::DAIA::Validator;
 my $app = MyDAIAServer->new;
 
 builder {
+    # TODO: enable RDF::Flow middleware ( make MyDAIAServer a RDF::FLow
+    # enable 'RDF::Flow', source => $model; pass_through = 1?
     mount '/validator' => Plack::App::DAIA::Validator->new; 
     mount '/' => $app;
 };

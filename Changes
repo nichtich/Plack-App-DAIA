@@ -1,0 +1,7 @@
+# Change file for Plack::App::DAIA
+
+0.2 2011-12-14
+    Added support of DAIA/RDF
+
+0.1  2011-12-08
+    First public version at CPAN

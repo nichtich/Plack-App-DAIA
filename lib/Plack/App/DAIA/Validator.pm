@@ -9,6 +9,22 @@ use Encode;
 use parent 'Plack::App::DAIA';
 use Plack::Util::Accessor qw(xsd xslt warnings);
 
+our ($FORMATS, $GRAPHVIZ);
+BEGIN {
+    $FORMATS = { 'html'=>'HTML','json'=>'DAIA/JSON','xml'=>'DAIA/XML' };
+    # optionally add DAIA/RDF
+    eval "use RDF::Trine::Serializer";
+    my @names = eval "RDF::Trine::Serializer->serializer_names" unless $@;
+    unless ($@) {
+        $FORMATS->{$_} = "DAIA/RDF ($_)" for @names;
+    }
+    eval "use RDF::Trine::Exporter::GraphViz";
+    $GRAPHVIZ = 'RDF::Trine::Exporter::Graphviz' unless $@;
+    unless ($@) {
+        $FORMATS->{$_} = "DAIA/RDF graph ($_)" for qw(dot svg);
+    }
+}
+
 sub call {
     my ($self, $env) = @_;
     my $req = Plack::Request->new($env);
@@ -25,7 +41,7 @@ sub call {
     my $xsd = $self->xsd;
 
     my $informat  = lc($req->param('in'));
-    my $outformat = lc($req->param('out')) || lc($req->param('format'));
+    my $outformat = lc($req->param('out')) || lc($req->param('format')) || 'html';
 
     my $callback  = $req->param('callback') || ""; 
     $callback = "" unless $callback =~ /^[a-z][a-z0-9._\[\]]*$/i;
@@ -50,11 +66,11 @@ sub call {
         $daia = shift @daiaobjs;
     }
 
-    if ( $outformat =~ /^(json|xml)$/ ) {
+    if ( $FORMATS->{$outformat} and $outformat ne 'html' ) {
         $daia = DAIA::Response->new() unless $daia;
-        $daia->addMessage(error(500,'en' => $error)) if $error;
-        return $self->serialize( 200, $daia, $outformat, $req->param('callback') );
-    } elsif ( $outformat and $outformat ne 'html' ) {
+        $daia->addError( 500, 'en' => $error ) if $error;
+        return $self->as_psgi( 200, $daia, $outformat, $req->param('callback') );
+    } elsif ( $outformat ne 'html' ) {
         $error = "Unknown output format - using HTML instead";
     }
 
@@ -95,8 +111,6 @@ sub call {
 <form method="post" accept-charset="utf-8" action="">
 HTML
 
-    # TODO: current value of informat/outformat
-
     $html .= $msg . $error .
      fieldset(label('Input: ',
             popup_menu('in',['','json','xml'],'',
@@ -108,13 +122,17 @@ HTML
       ).
       fieldset(
         label('Output: ',
-            popup_menu('out',['html','json','xml'],'html',
-                       {'html'=>'HTML','json'=>'DAIA/JSON','xml'=>'DAIA/XML'})
+            popup_menu('out',
+                [ sort { $FORMATS->{$a} cmp $FORMATS->{$b} } keys %$FORMATS ], 
+                $outformat, $FORMATS )
         ), '&#xA0;', 
         label('JSONP Callback: ', textfield(-name=>'callback',-value=>$callback))
       ).
       fieldset('<input type="submit" value="Convert" class="submit" />')
     ;
+    if ($GRAPHVIZ && $url && !$data) {
+       $html .= "<fieldset>See RDF graph <a href=\"?url=$eurl&format=svg\">as SVG</a></fieldset>";
+    }
     $html .= '</form>';
 
     if ($daia) {
@@ -156,10 +174,9 @@ HTML
       $html .= "</div>";
     }
 
-    my $VERSION = $DAIA::VERSION;
     $html .= <<HTML;
 <div class='footer'>
-Based on <a href='http://search.cpan.org/perldoc?Plack::App::DAIA'>Plack::App::DAIA</a> $VERSION.
+Based on <a href='http://search.cpan.org/perldoc?Plack::App::DAIA'>Plack::App::DAIA</a> ${DAIA::VERSION}.
 Visit the <a href="http://github.com/gbv/daia/">DAIA project at github</a> for sources and details. 
 </div></body>
 HTML

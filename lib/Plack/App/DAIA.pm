@@ -7,10 +7,30 @@ use parent 'Plack::Component';
 use LWP::Simple qw(get);
 use Encode;
 use JSON;
-use DAIA '0.35';
+use DAIA;
+use Scalar::Util qw(blessed);
 
 use Plack::Util::Accessor qw(xsd xslt warnings);
 use Plack::Request;
+
+# we do not want depend on the following modules
+our ($TRINE_MODEL, $TRINE_SERIALIZER, $RDF_NS, $GRAPHVIZ);
+BEGIN {
+    # optionally use RDF::Trine::Serializer
+    $TRINE_MODEL = 'RDF::Trine::Model';
+    $TRINE_SERIALIZER = 'RDF::Trine::Serializer';
+    eval "use $TRINE_MODEL; use $TRINE_SERIALIZER";
+    if ($@) {
+        $TRINE_MODEL = undef;
+        $TRINE_SERIALIZER = undef;
+    }
+    # optionally use RDF::NS
+    eval "use RDF::NS";
+    $RDF_NS = eval "RDF::NS->new('any')" unless $@;
+    # optionally use RDF::Trine::Exporter::GraphViz
+    eval "use RDF::Trine::Exporter::GraphViz";
+    $GRAPHVIZ = 'RDF::Trine::Exporter::GraphViz' unless $@;
+}
 
 sub prepare_app {
     my $self = shift;
@@ -26,7 +46,7 @@ sub call {
     my $format = lc($req->param('format')) || "";
 
     if (!$format) {
-        # TODO: try content negotiation if DAIA/RDF is enabled
+        # TODO: guess format via content negotiation
     }
     
     my $daia = $self->retrieve( $id );
@@ -55,7 +75,25 @@ sub as_psgi {
 
     my ($type, $content);
 
-    if ( $format eq 'rdfjson' and $DAIA::VERSION >= 0.35 ) {
+    if ( $TRINE_SERIALIZER and $format and $format !~ /^(rdfjson|json|xml)$/ ) {
+        my %opt;
+        $opt{namespaces} = $RDF_NS if $RDF_NS and $format ne 'rdfxml'; # NOTE: RDF/XML dumps all namespaces
+        my $ser;
+        if ( $GRAPHVIZ and $TRINE_MODEL and $format =~ /^(dot|svg)$/ ) {
+            $ser = $GRAPHVIZ->new( as => $format, %opt );
+        } else {
+            $ser = eval { $TRINE_SERIALIZER->new( $format, %opt ); };
+        }
+        if ($ser) {
+            # NOTE: We could get rid of RDF::Trine::Model if hashref converted directly to iterator
+            my $model = $TRINE_MODEL->temporary_model;
+            $model->add_hashref( $daia->rdfhash );
+            ($type) = $ser->media_types( $format );
+            $content = $ser->serialize_model_to_string( $model );
+        }
+    } 
+
+    if ( $format eq 'rdfjson' ) {
         $type    = "application/javascript; charset=utf-8";
         $content = JSON->new->pretty->encode($daia->rdfhash);
         # TODO: other serializations
@@ -64,10 +102,14 @@ sub as_psgi {
         $content = $daia->json( $callback );
     
         # TODO: add rdf serialization formats
-    } else {
+    } elsif (!$content) {
         $type = "application/xml; charset=utf-8";
-        if ( $format ne 'xml' and $self->warnings ) {
-            $daia->addMessage( 'en' => 'please provide an explicit parameter format=xml', 300 );
+        if ( $self->warnings ) {
+            if ( not $format ) {
+                $daia->addMessage( 'en' => 'please provide an explicit parameter format=xml', 300 );
+            } elsif ( $format ne 'xml' ) {
+                $daia->addMessage( 'en' => 'unknown or unsupported format', 300 );
+            }
         }
         $content = $daia->xml( ( $self->xslt ? (xslt => $self->xslt) : () )  );
     }
@@ -100,7 +142,7 @@ This module implements a L<DAIA> server as PSGI application. It provides
 serialization in DAIA/XML and DAIA/JSON and automatically adds some warnings
 and error messages. The core functionality must be implemented by deriving
 from this class and implementing the method C<retrieve>. The following
-serialization formats are supported:
+serialization formats are supported by default:
 
 =over 4
 
@@ -117,6 +159,12 @@ DAIA/JSON format
 DAIA/RDF in RDF/JSON.
 
 =back
+
+In addition you get DAIA/RDF in several RDF formats (C<rdfxml>, 
+C<turtle>, and C<ntriples> if L<RDF::Trine> is installed. If L<RDF::NS> is
+installed, you also get known namespace prefixes for RDF/Turtle format.
+Furthermore the output formats C<svg> and C<dot> are supported if
+L<RDF::Trine::Exporter::GraphViz> is installed to visualize RDF graphs.
 
 =method new ( [%options] )
 
@@ -145,8 +193,8 @@ if you derive an application from Plack::App::DAIA.
 
 =method as_psgi ( $status, $daia [, $format [, $callback ] ] )
 
-Serializes a L<DAIA::Response> in some DAIA serialization format (C<xml> 
-by default) and returns a a PSGI response with given HTTP status code.
+Serializes a L<DAIA::Response> in some DAIA serialization format (C<xml> by
+default) and returns a a PSGI response with given HTTP status code.
 
 =method call
 
