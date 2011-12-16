@@ -1,5 +1,8 @@
 # Change file for Plack::App::DAIA
 
+0.3 2011-12-16
+    Use DAIA 0.4
+
 0.2 2011-12-14
     Added support of DAIA/RDF
 

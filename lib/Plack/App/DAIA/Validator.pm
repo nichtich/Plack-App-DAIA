@@ -9,19 +9,18 @@ use Encode;
 use parent 'Plack::App::DAIA';
 use Plack::Util::Accessor qw(xsd xslt warnings);
 
-our ($FORMATS, $GRAPHVIZ);
+our ($FORMATS);
 BEGIN {
-    $FORMATS = { 'html'=>'HTML','json'=>'DAIA/JSON','xml'=>'DAIA/XML' };
-    # optionally add DAIA/RDF
-    eval "use RDF::Trine::Serializer";
-    my @names = eval "RDF::Trine::Serializer->serializer_names" unless $@;
-    unless ($@) {
-        $FORMATS->{$_} = "DAIA/RDF ($_)" for @names;
-    }
-    eval "use RDF::Trine::Exporter::GraphViz";
-    $GRAPHVIZ = 'RDF::Trine::Exporter::Graphviz' unless $@;
-    unless ($@) {
-        $FORMATS->{$_} = "DAIA/RDF graph ($_)" for qw(dot svg);
+    my %f = DAIA->formats;
+    $FORMATS = { map { $_ => $_ } keys %f };
+    $FORMATS->{json}     = 'DAIA/JSON';
+    $FORMATS->{xml}      = 'DAIA/XML';
+    $FORMATS->{rdfjson}  = 'DAIA/RDF/JSON';
+    $FORMATS->{turtle}   = 'DAIA/RDF/Turtle'   if $FORMATS->{turtle};
+    $FORMATS->{ntriples} = 'DAIA/RDF/NTriples' if $FORMATS->{ntriples};
+    $FORMATS->{rdfxml}   = 'DAIA/RDF/XML'      if $FORMATS->{rdfxml};
+    foreach (qw(dot svg)) {
+        $FORMATS->{$_} = "DAIA/RDF graph ($_)" if $FORMATS->{$_}; 
     }
 }
 
@@ -68,7 +67,7 @@ sub call {
 
     if ( $FORMATS->{$outformat} and $outformat ne 'html' ) {
         $daia = DAIA::Response->new() unless $daia;
-        $daia->addError( 500, 'en' => $error ) if $error;
+        $daia->addMessage( $error, errno => 500, lang => 'en' ) if $error;
         return $self->as_psgi( 200, $daia, $outformat, $req->param('callback') );
     } elsif ( $outformat ne 'html' ) {
         $error = "Unknown output format - using HTML instead";
@@ -130,14 +129,16 @@ HTML
       ).
       fieldset('<input type="submit" value="Convert" class="submit" />')
     ;
-    if ($GRAPHVIZ && $url && !$data) {
+    my $has_graphviz = grep /^(svg|dot)$/, keys %$FORMATS;
+    if ( $has_graphviz && $url && !$data) {
        $html .= "<fieldset>See RDF graph <a href=\"?url=$eurl&format=svg\">as SVG</a></fieldset>";
     }
     $html .= '</form>';
 
     if ($daia) {
       if ( $informat eq 'xml' or DAIA::guess($data) eq 'xml' ) {
-        my ($schema, $parser); # TODO: move this into a DAIA library method
+        # TODO: move this into module DAIA (validate option when parsing)
+        my ($schema, $parser); 
         eval { require XML::LibXML; };
         if ( $@ ) {
             $error = "XML::LibXML::Schema required to validate DAIA/XML";
@@ -174,10 +175,12 @@ HTML
       $html .= "</div>";
     }
 
+    $html .= "<div class='footer'>Based on ";
+    $html .= join ' and ', map {
+        "<a href='http://search.cpan.org/perldoc?$_'>$_</a> " . ($_->VERSION || '');
+    } qw(Plack::App::DAIA::Validator DAIA);
     $html .= <<HTML;
-<div class='footer'>
-Based on <a href='http://search.cpan.org/perldoc?Plack::App::DAIA'>Plack::App::DAIA</a> ${DAIA::VERSION}.
-Visit the <a href="http://github.com/gbv/daia/">DAIA project at github</a> for sources and details. 
+. Visit the <a href="http://github.com/gbv/daia/">DAIA project at github</a> for sources and details. 
 </div></body>
 HTML
 

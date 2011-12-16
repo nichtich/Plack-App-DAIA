@@ -13,24 +13,7 @@ use Scalar::Util qw(blessed);
 use Plack::Util::Accessor qw(xsd xslt warnings);
 use Plack::Request;
 
-# we do not want depend on the following modules
-our ($TRINE_MODEL, $TRINE_SERIALIZER, $RDF_NS, $GRAPHVIZ);
-BEGIN {
-    # optionally use RDF::Trine::Serializer
-    $TRINE_MODEL = 'RDF::Trine::Model';
-    $TRINE_SERIALIZER = 'RDF::Trine::Serializer';
-    eval "use $TRINE_MODEL; use $TRINE_SERIALIZER";
-    if ($@) {
-        $TRINE_MODEL = undef;
-        $TRINE_SERIALIZER = undef;
-    }
-    # optionally use RDF::NS
-    eval "use RDF::NS";
-    $RDF_NS = eval "RDF::NS->new('any')" unless $@;
-    # optionally use RDF::Trine::Exporter::GraphViz
-    eval "use RDF::Trine::Exporter::GraphViz";
-    $GRAPHVIZ = 'RDF::Trine::Exporter::GraphViz' unless $@;
-}
+our %FORMATS = DAIA->formats;
 
 sub prepare_app {
     my $self = shift;
@@ -73,36 +56,9 @@ sub retrieve {
 sub as_psgi {
     my ($self, $status, $daia, $format, $callback) = @_;
 
-    my ($type, $content);
-
-    if ( $TRINE_SERIALIZER and $format and $format !~ /^(rdfjson|json|xml)$/ ) {
-        my %opt;
-        $opt{namespaces} = $RDF_NS if $RDF_NS and $format ne 'rdfxml'; # NOTE: RDF/XML dumps all namespaces
-        my $ser;
-        if ( $GRAPHVIZ and $TRINE_MODEL and $format =~ /^(dot|svg)$/ ) {
-            $ser = $GRAPHVIZ->new( as => $format, %opt );
-        } else {
-            $ser = eval { $TRINE_SERIALIZER->new( $format, %opt ); };
-        }
-        if ($ser) {
-            # NOTE: We could get rid of RDF::Trine::Model if hashref converted directly to iterator
-            my $model = $TRINE_MODEL->temporary_model;
-            $model->add_hashref( $daia->rdfhash );
-            ($type) = $ser->media_types( $format );
-            $content = $ser->serialize_model_to_string( $model );
-        }
-    } 
-
-    if ( $format eq 'rdfjson' ) {
-        $type    = "application/javascript; charset=utf-8";
-        $content = JSON->new->pretty->encode($daia->rdfhash);
-        # TODO: other serializations
-    } elsif ( $format eq 'json' ) {
-        $type    = "application/javascript; charset=utf-8";
-        $content = $daia->json( $callback );
-    
-        # TODO: add rdf serialization formats
-    } elsif (!$content) {
+    my $type    = $FORMATS{$format};
+    my $content = $daia->serialize($format) if $type;
+    if (!$type) {
         $type = "application/xml; charset=utf-8";
         if ( $self->warnings ) {
             if ( not $format ) {
@@ -134,7 +90,6 @@ sub as_psgi {
     };
 
     1;
-
 
 =head1 DESCRIPTION
 
