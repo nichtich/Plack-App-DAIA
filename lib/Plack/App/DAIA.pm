@@ -57,8 +57,8 @@ sub as_psgi {
     my ($self, $status, $daia, $format, $callback) = @_;
 
     my $type    = $FORMATS{$format};
-    my $content = $daia->serialize($format) if $type;
-    if (!$type) {
+    my $content = $daia->serialize($format) if $type and $format ne 'xml';
+    if (!$type || !$content) {
         $type = "application/xml; charset=utf-8";
         if ( $self->warnings ) {
             if ( not $format ) {
