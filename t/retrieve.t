@@ -4,23 +4,25 @@ use Test::More;
 use Plack::Test;
 use HTTP::Request::Common;
 
-use Plack::App::DAIA;
-use Plack::App::DAIA::Validator;
 use DAIA;
+use Plack::App::DAIA;
 
-my $app = Plack::App::DAIA->new;
+my $app = Plack::App::DAIA->new(
+    code => sub {
+        my $id = shift;        
+        my $daia = DAIA::Response->new;
+        $daia->addDocument( id => $id );
+        return $daia;
+    }
+);
 
 test_psgi $app, sub {
         my $cb  = shift;
-
-        my $res = $cb->(GET "/?id=abc");
+        my $res = $cb->(GET "/?id=my:abc");
         my $daia = eval { DAIA::parse_xml( $res->content ); };
-        isa_ok( $daia, 'DAIA::Response' );
         like( $res->content, qr{^<\?xml.*xmlns}s, 'XML header and namespace' );
-
-        $res = $cb->(GET "/?id=abc&format=json");
-        $daia = eval { DAIA::parse_json( $res->content ); };
         isa_ok( $daia, 'DAIA::Response' );
+        ok( $daia->document, "has document" );
     };
 
 done_testing;

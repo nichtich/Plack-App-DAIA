@@ -1,9 +1,8 @@
 # Change file for Plack::App::DAIA
 
-0.31 
+0.4 2011-12-16 
     Fixed DAIA/XML header bug
-
-0.3 2011-12-16
+    Added code parameter
     Use DAIA 0.4
 
 0.2 2011-12-14
