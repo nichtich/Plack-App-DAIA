@@ -1,5 +1,8 @@
 # Change file for Plack::App::DAIA
 
+0.42 2012-01-18
+    Introduced DAIA test suites
+
 0.41 2012-01-17
     First draft of Plack::App::DAIA::Test    
     Added turtle and HTML output to validator

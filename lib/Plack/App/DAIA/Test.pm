@@ -1,42 +1,46 @@
+use strict;
+use warnings;
 package Plack::App::DAIA::Test;
 #ABSTRACT: Test DAIA Servers
+
+use base 'Test::Builder::Module';
+our @EXPORT = qw(test_daia_psgi test_daia daia_app daia_test_suite);
 
 use URI::Escape;
 use Test::More;
 use Plack::Test;
 use Plack::App::DAIA;
 use Scalar::Util qw(reftype blessed);
+use Carp;
 use HTTP::Request::Common;
-
-use base qw(Exporter Test::Builder::Module);
-our @EXPORT = qw(test_daia_psgi test_daia daia_app if_daia_call);
-
-my $CLASS = __PACKAGE__;
+use Test::JSON::Entails;
 
 sub test_daia {
     my $app = daia_app(shift) || do {
-        $CLASS->builder->ok(0,"Could not construct DAIA application");
+        __PACKAGE__->builder->ok(0,"Could not construct DAIA application");
         return;
     };
+    my $test_name = pop @_ if @_ % 2;
     while (@_) {
         my $id = shift;
-        my $code = shift;
+        my $expected = shift;
         my $res = $app->retrieve($id);
-        if (!if_daia_call( $res, $code )) {
+        if (!_if_daia_check( $res, $expected, $test_name )) {
             $@ = "The thing isa DAIA::Response" unless $@;
-            $CLASS->builder->ok(0, $@);
+            __PACKAGE__->builder->ok(0, $@);
         }
     }
 }
 
 sub test_daia_psgi {
     my $app = daia_app(shift) || do {
-        $CLASS->builder->ok(0,"Could not construct DAIA application");
+        __PACKAGE__->builder->ok(0,"Could not construct DAIA application");
         return;
     };
+    my $test_name = pop @_ if @_ % 2;
     while (@_) {
         my $id = shift;
-        my $code = shift;
+        my $expected = shift;
         test_psgi $app, sub {
             my $req = shift->(GET "/?id=".uri_escape($id));
             my $res = eval { DAIA::parse( $req->content ); };
@@ -45,9 +49,9 @@ sub test_daia_psgi {
                 $@ =~ s/ at .* line.*//g;
                 $@ =~ s/\s*$//sg;
             }
-            if (!if_daia_call( $res, $code )) {
+            if (!_if_daia_check( $res, $expected, $test_name )) {
                 $@ = "No valid The thing isa DAIA::Response" unless $@;
-                $CLASS->builder->ok(0, $@);
+                __PACKAGE__->builder->ok(0, $@);
             }
         };
     }
@@ -81,13 +85,87 @@ sub daia_app {
     return;
 }
 
-sub if_daia_call {
-    my ($daia, $code) = @_;
+# Call C<$code> with C<$daia> and set as C<$_>, if C<$daia> is a L<DAIA::Response>
+# and return C<$daia> on success. Return C<undef> otherwise.
+sub _if_daia_check {
+    my ($daia, $expected, $test_name) = @_;
     if ( blessed($daia) and $daia->isa('DAIA::Response') ) {
-        local $_ = $daia;
-        $code->($daia);
+        if ( (reftype($expected)||'') eq 'CODE') {
+            local $_ = $daia;
+            $expected->($daia);
+        } else {
+            local $Test::Builder::Level = $Test::Builder::Level + 2;
+            entails $daia->json, $expected, $test_name;
+        }
         return $daia;
     }
+}
+
+sub daia_test_suite {
+    my $suite = shift;
+    my $test  = __PACKAGE__->builder;
+    my @lines;
+
+    if ( ref($suite) ) {
+        croak 'usage: daia_test_suite( $file | $glob | $string )'
+            unless reftype($suite) eq 'GLOB' or blessed($suite) and $suite->isa('IO::File');
+        @lines = <$suite>;
+    } elsif ( $suite !~ qr{^https?://} and $suite !~ /[\r\n]/ ) {
+        open (SUITE, '<', $suite) or croak "failed to open daia test suite $suite";
+        @lines = <SUITE>;
+        close SUITE;
+    } else {
+        @lines = split /\n/, $suite;
+    }
+
+    my $line = 0;
+    my $comment = '';
+    my $json = undef;
+    my $base;
+    my @ids;
+
+    my $run = sub {
+        return unless $base;
+        $json ||= { };
+        foreach my $id (@ids) {
+            my $test_name = "$base?id=$id";
+            $comment =~ s/^\s+|\s+$//g;
+            $test_name .= " ($comment)" if $comment ne '';
+            local $Test::Builder::Level = $Test::Builder::Level + 2; # called 2 levels above
+            test_daia
+                $base,
+                $id => $json, $test_name;
+        }
+    };
+
+    foreach (@lines) { 
+        chomp;
+        $comment = $1 if /^#(.+)/;
+        s/^(#.*|\s+)$//; # empty line or comment
+        $line++;
+        if (defined $json) {
+            $json .= $_;
+            if ($_ eq '') {
+                $run->();
+                @ids = ();
+                $json = undef;
+                $comment = '';
+            }
+        } elsif ( $_ eq '' ) {
+            next;
+        } elsif( $_ =~ qr{^https?://.+} ) {
+            $comment = '';
+            $base = $_;
+        } elsif( $_ =~ qr/^\s*{/ ) {
+            $json = $_; 
+        } elsif( $_ =~ qr{\s\s} )  {
+            croak "syntax error DAIA test suite line $line";
+        } else {
+            $comment = '';
+            push @ids, $_;
+        }
+    }
+    $run->();
 }
 
 1;
@@ -155,10 +233,5 @@ identifiers, each given a test function.
 
 Returns an instance of L<Plack::App::DAIA> or undef. Code references or URLs
 are wrapped. For wrapped URLs C<$@> is set on failure.
-
-=method if_daia_call ( $daia, $code )
-
-Call C<$code> with C<$daia> and set as C<$_>, if C<$daia> is a L<DAIA::Response>
-and return C<$daia> on success. Return C<undef> otherwise.
 
 =cut
