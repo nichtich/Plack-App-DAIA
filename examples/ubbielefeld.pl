@@ -110,8 +110,7 @@ __END__
 #   perl -MPlack::App::DAIA::Test -MTest::More -e 'daia_test_suite \*STDIN; done_testing;'
 #
 
-# TODO: server=http://localhost:5000/
-http://localhost:5000/
+server=http://localhost:5000/
 
 # TODO: support id=http://katalog.ub.uni-bielefeld.de/title/218777
 218777

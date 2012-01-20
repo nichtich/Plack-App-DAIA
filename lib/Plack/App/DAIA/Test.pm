@@ -33,10 +33,10 @@ sub test_daia {
 }
 
 sub test_daia_psgi {
-    my $app = daia_app(shift) || do {
-        __PACKAGE__->builder->ok(0,"Could not construct DAIA application");
-        return;
-    };
+    my $app = shift;
+
+    # TODO: load psgi file if string given and allow for URL
+
     my $test_name = pop @_ if @_ % 2;
     while (@_) {
         my $id = shift;
@@ -102,7 +102,8 @@ sub _if_daia_check {
 }
 
 sub daia_test_suite {
-    my $suite = shift;
+    my ($suite, %args) = @_;
+
     my $test  = __PACKAGE__->builder;
     my @lines;
 
@@ -121,28 +122,44 @@ sub daia_test_suite {
     my $line = 0;
     my $comment = '';
     my $json = undef;
-    my $base;
-    my @ids;
+    my $server = $args{server};
+    my @ids = @{$args{ids}} if $args{ids};
 
     my $run = sub {
-        return unless $base;
-        $json ||= { };
+        return unless $server;
+        $json ||= '{ }';
+        my $server_name = $server;
+        if ($server and $server !~ qr{^https?://}) {
+            $_ = Plack::Util::load_psgi($server);
+            if ( ref($_) ) {
+                diag("loaded PSGI from $server");
+                $server = $_;
+            } else {
+                fail("failed to load PSGI from $server");
+                return;
+            }
+        }
         foreach my $id (@ids) {
-            my $test_name = "$base?id=$id";
+            my $test_name = "$server_name?id=$id";
             $comment =~ s/^\s+|\s+$//g;
             $test_name .= " ($comment)" if $comment ne '';
             local $Test::Builder::Level = $Test::Builder::Level + 2; # called 2 levels above
-            test_daia
-                $base,
-                $id => $json, $test_name;
+            my $test_json = $json;
+            $test_json =~ s/\$id/$id/mg;
+            if (ref($server)) {
+                test_daia_psgi $server, $id => $test_json, $test_name;
+            } else {
+                test_daia $server, $id => $test_json, $test_name;
+            }
         }
     };
 
     foreach (@lines) { 
         chomp;
-        $comment = $1 if /^#(.+)/;
+        $comment = $1 if /^#(.*)/;
         s/^(#.*|\s+)$//; # empty line or comment
         $line++;
+
         if (defined $json) {
             $json .= $_;
             if ($_ eq '') {
@@ -153,14 +170,12 @@ sub daia_test_suite {
             }
         } elsif ( $_ eq '' ) {
             next;
-        } elsif( $_ =~ qr{^https?://.+} ) {
+        } elsif( $_ =~ qr{^server=(.*)}i ) {
             $comment = '';
-            $base = $_;
+            $server = $1;
         } elsif( $_ =~ qr/^\s*{/ ) {
             $json = $_; 
-        } elsif( $_ =~ qr{\s\s} )  {
-            croak "syntax error DAIA test suite line $line";
-        } else {
+        } else { # identifier
             $comment = '';
             push @ids, $_;
         }
@@ -229,9 +244,18 @@ each given a test function.
 Calls a DAIA server C<$app> as L<PSGI> application with one or more
 identifiers, each given a test function.
 
+=method daia_test_suite ( $input [ %options ] )
+
+Run a DAIA test suite from a string or stream (GLOB or L<IO::File>). The only
+option supported so far is C<server>. A DAIA test suite lists servers,
+identifiers, and DAIA/JSON response fragments to test DAIA servers. The command
+line client L<provedaia> is included in this distribution, see its
+documentation for further details.
+
 =method daia_app ( $plack_app_daia | $url | $code )
 
 Returns an instance of L<Plack::App::DAIA> or undef. Code references or URLs
-are wrapped. For wrapped URLs C<$@> is set on failure.
+are wrapped. For wrapped URLs C<$@> is set on failure. This method may be removed
+to be used internally only!
 
 =cut

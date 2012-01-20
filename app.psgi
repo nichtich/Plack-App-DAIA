@@ -9,7 +9,9 @@ use Plack::App::DAIA::Validator;
         my ($self, $id) = @_;
         my $daia = DAIA::Response->new();
 
-        # construct DAIA object
+        if ($id and $id =~ /^[a-z0-9-]+:/) {
+            $daia->document( id => $id );
+        }
 
         return $daia;
     };

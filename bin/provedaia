@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+#ABSTRACT: run DAIA test suites
+#PODNAME: provedaia
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use Plack::App::DAIA::Test;
+use Test::More;
+
+my ($help,$version,$server);
+
+GetOptions(
+    'help|?'   => \$help,
+    'server:s' => \$server,
+    'version'  => \$version,
+);
+pod2usage(-verbose => 1) if defined $help;
+
+if ($version) {
+    printf "This is provedaia with Plack::App::DAIA %s and DAIA %s\n", 
+           $PLack::App::DAIA::VERSION, $DAIA::VERSION;
+    exit;
+}
+ 
+@ARGV = \*STDIN unless @ARGV;
+
+foreach (@ARGV) {
+    diag( $_ ) unless ref $_;
+    eval { daia_test_suite( $_, server => $server ); };
+    fail( $@ ) if $@;
+}
+
+done_testing;
+
+=head1 SYNOPSIS
+
+daia [<OPTIONS>] [<FILES>]
+
+ Options:
+   -?|-h|--help          show this help
+   --version             show version
+   --server URL-or-file  set base URL of DAIA server or load PSGI script
+
+=head1 DESCRIPTION
+
+This script can be used to test DAIA servers. It is based on the package
+L<Plack::App::DAIA::Test> but you do not need to write full test scripts.
+Instead you just provide server, query identifier(s), and an optinal response.
+The output of this script conforms to the Test Anything Protocol (TAP).
+
+The DAIA response can be checked with L<Test::JSON::Entails>. For instance you
+can check that the response contains a document with the ID you queried for:
+
+    { "document" : [
+      { "id" : "$id" }
+    ] }
+
+As L<Plack::App::DAIA::Test> is work in progress, so is this script.
+
+=cut
