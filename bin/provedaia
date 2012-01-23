@@ -37,7 +37,7 @@ done_testing;
 
 =head1 SYNOPSIS
 
-daia [<OPTIONS>] [<FILES>]
+provedaia [<OPTIONS>] [<FILES>]
 
  Options:
    -?|-h|--help          show this help
