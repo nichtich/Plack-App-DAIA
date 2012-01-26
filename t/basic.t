@@ -21,6 +21,14 @@ test_psgi $app, sub {
         $res = $cb->(GET "/?id=abc&format=json");
         $daia = eval { DAIA::parse_json( $res->content ); };
         isa_ok( $daia, 'DAIA::Response' );
+        
+        $res = $cb->(GET "/?id=x");
+        $daia = eval { DAIA::parse( $res->content ); };
+        like( $daia->json, qr{"please provide an explicit parameter format=xml"}m, "missing format" );
+
+        $res = $cb->(GET "/?id=x\ny&format=xml");
+        $daia = eval { DAIA::parse( $res->content ); };
+        like( $daia->json, qr{"unknown identifier format"}m, "invalid identifier" );
     };
 
 done_testing;

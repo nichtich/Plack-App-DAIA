@@ -10,12 +10,14 @@ use Pod::Usage;
 use Plack::App::DAIA::Test;
 use Test::More;
 
-my ($help,$version,$server);
+my ($help,$version,$server,$end,$combined);
 
 GetOptions(
     'help|?'   => \$help,
     'server:s' => \$server,
     'version'  => \$version,
+    'end'      => \$end,
+    'combined' => \$combined,
 );
 pod2usage(-verbose => 1) if defined $help;
 
@@ -25,11 +27,13 @@ if ($version) {
     exit;
 }
  
+$end = 1 if $combined;
 @ARGV = \*STDIN unless @ARGV;
 
 foreach (@ARGV) {
     diag( $_ ) unless ref $_;
-    eval { daia_test_suite( $_, server => $server ); };
+    $server = $_ if $combined;
+    eval { daia_test_suite( $_, server => $server, end => $end ); };
     fail( $@ ) if $@;
 }
 
@@ -43,21 +47,25 @@ provedaia [<OPTIONS>] [<FILES>]
    -?|-h|--help          show this help
    --version             show version
    --server URL-or-file  set base URL of DAIA server or load PSGI script
+   --end                 skip everything until __END__ in input
+   --combined            use files as both, server and test suite
 
 =head1 DESCRIPTION
 
 This script can be used to test DAIA servers. It is based on the package
 L<Plack::App::DAIA::Test> but you do not need to write full test scripts.
-Instead you just provide server, query identifier(s), and an optinal response.
+Instead you just provide server, query identifier(s), and an optional response.
 The output of this script conforms to the Test Anything Protocol (TAP).
 
-The DAIA response can be checked with L<Test::JSON::Entails>. For instance you
+DAIA responses can be checked with L<Test::JSON::Entails>. For instance you
 can check that the response contains a document with the ID you queried for:
 
     { "document" : [
       { "id" : "$id" }
     ] }
 
-As L<Plack::App::DAIA::Test> is work in progress, so is this script.
+Have a look at the bottom of the L<daia-ubbielefeld.pl> example script for
+another example. As L<Plack::App::DAIA::Test> is work in progress, so is this
+script.
 
 =cut

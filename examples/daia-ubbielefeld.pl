@@ -15,7 +15,10 @@ our $pQuery;
 BEGIN { eval { use pQuery; }; $pQuery = !$@; };
 
 
-my $app = Plack::App::DAIA->new( code => \&retrieve );
+my $app = Plack::App::DAIA->new( 
+    code     => \&retrieve,
+    idformat => qw{^(http://katalog.ub.uni-bielefeld.de/title/)?[0-9]+$}
+);
 
 sub retrieve {
     my $id = shift;
@@ -27,16 +30,7 @@ sub retrieve {
         id      => "http://lobid.org/organisation/DE-361" # URI (Linked Data)
     );
       
-    # sort out invalid identifiers. In a future version of
-    # Plack::App::DAIA this should be supported easier. 
-    return if $id eq '';
-    $id =~ s{^http://katalog.ub.uni-bielefeld.de/title/}{};
-    if ( $id !~ /^[0-9]+$/ ) {
-        $daia->addMessage( "invalid identifier format", errno => 1 );
-        return $daia;
-    }
-
-    $id = 'http://katalog.ub.uni-bielefeld.de/title/' . $id;
+    $id = 'http://katalog.ub.uni-bielefeld.de/title/' . $id unless $id =~ /^http/;
 
     my $html = get($id);
     if (!$html or $@) {
@@ -106,14 +100,16 @@ __END__
 #
 # You can test the running server with Plack::App::DAIA::Test via:
 #
-# awk 'p {print} /__END__/ {p=1}' ubbielefeld.pl | \
-#   perl -MPlack::App::DAIA::Test -MTest::More -e 'daia_test_suite \*STDIN; done_testing;'
+# plackup examples/daia-ubbielefeld.pl
+# provedaia -s http://localhost:5000 --end examples/daia-ubbielefeld.pl
+#
+# or without plackup via:
+# provedaia -c examples/daia-ubbielefeld.pl
+#
 #
 
-server=http://localhost:5000/
-
-# TODO: support id=http://katalog.ub.uni-bielefeld.de/title/218777
 218777
+http://katalog.ub.uni-bielefeld.de/title/218777
 
 # found at least one item
 { "document" : [ {

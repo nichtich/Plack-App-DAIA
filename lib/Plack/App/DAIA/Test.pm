@@ -20,7 +20,8 @@ sub test_daia {
         __PACKAGE__->builder->ok(0,"Could not construct DAIA application");
         return;
     };
-    my $test_name = pop @_ if @_ % 2;
+    my $test_name = "test_daia";
+    $test_name = pop(@_) if @_ % 2;
     while (@_) {
         my $id = shift;
         my $expected = shift;
@@ -36,8 +37,8 @@ sub test_daia_psgi {
     my $app = shift;
 
     # TODO: load psgi file if string given and allow for URL
-
-    my $test_name = pop @_ if @_ % 2;
+    my $test_name = "test_daia";
+    $test_name = pop(@_) if @_ % 2;
     while (@_) {
         my $id = shift;
         my $expected = shift;
@@ -112,18 +113,19 @@ sub daia_test_suite {
             unless reftype($suite) eq 'GLOB' or blessed($suite) and $suite->isa('IO::File');
         @lines = <$suite>;
     } elsif ( $suite !~ qr{^https?://} and $suite !~ /[\r\n]/ ) {
-        open (SUITE, '<', $suite) or croak "failed to open daia test suite $suite";
-        @lines = <SUITE>;
-        close SUITE;
+        open (my $fh, '<', $suite) or croak "failed to open daia test suite $suite";
+        @lines = <$fh>;
+        close $fh;
     } else {
         @lines = split /\n/, $suite;
     }
-
+    
     my $line = 0;
     my $comment = '';
     my $json = undef;
     my $server = $args{server};
-    my @ids = @{$args{ids}} if $args{ids};
+    my @ids;
+    @ids = @{$args{ids}} if $args{ids};
 
     my $run = sub {
         return unless $server;
@@ -155,6 +157,10 @@ sub daia_test_suite {
     };
 
     foreach (@lines) { 
+        if ($args{end}) {
+            $args{end} = 0 if /__END__/;
+            next;
+        }
         chomp;
         $comment = $1 if /^#(.*)/;
         s/^(#.*|\s+)$//; # empty line or comment
