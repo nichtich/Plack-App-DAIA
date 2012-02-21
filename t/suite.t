@@ -2,8 +2,19 @@ use strict;
 use warnings;
 
 use Test::More;
-use Plack::App::DAIA::Test;
+use Plack::App::DAIA::Test::Suite;
 
-daia_test_suite( 't/docid.json', server => './app.psgi', ids => [ 'foo:bar' ] );
+my $app = './app.psgi';
+
+provedaia( 't/docid.json', server => $app, ids => [ 'foo:bar' ] );
+
+provedaia <<SUITE, server => $app;
+foo:bar
+
+# document expected
+{ "document" : [ { } ] }
+SUITE
+
+provedaia $app, server => $app, end => 1;
 
 done_testing;

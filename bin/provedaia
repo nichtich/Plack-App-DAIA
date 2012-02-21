@@ -7,7 +7,7 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use Plack::App::DAIA::Test;
+use Plack::App::DAIA::Test::Suite;
 use Test::More;
 
 my ($help,$version,$server,$end,$combined);
@@ -22,18 +22,18 @@ GetOptions(
 pod2usage(-verbose => 1) if defined $help;
 
 if ($version) {
-    printf "This is provedaia with Plack::App::DAIA %s and DAIA %s\n", 
+    printf "This is provedaia with Plack::App::DAIA %s and DAIA %s\n",
            $PLack::App::DAIA::VERSION, $DAIA::VERSION;
     exit;
 }
- 
+
 $end = 1 if $combined;
 @ARGV = \*STDIN unless @ARGV;
 
 foreach (@ARGV) {
     diag( $_ ) unless ref $_;
     $server = $_ if $combined;
-    eval { daia_test_suite( $_, server => $server, end => $end ); };
+    eval { provedaia( $_, server => $server, end => $end ); };
     fail( $@ ) if $@;
 }
 
@@ -53,19 +53,42 @@ provedaia [<OPTIONS>] [<FILES>]
 =head1 DESCRIPTION
 
 This script can be used to test DAIA servers. It is based on the package
-L<Plack::App::DAIA::Test> but you do not need to write full test scripts.
-Instead you just provide server, query identifier(s), and an optional response.
-The output of this script conforms to the Test Anything Protocol (TAP).
+L<Plack::App::DAIA::Test::Suite>, so the output of this script conforms to the
+Test Anything Protocol (TAP). You can provide a full test script or a DAIA
+server that contains its own test suite after the C<__END__> marker. If no
+file is provided, it is read from standard input. See the bottom of
+C<examples/daia-ubbielefeld.pl> for an example.
 
-DAIA responses can be checked with L<Test::JSON::Entails>. For instance you
-can check that the response contains a document with the ID you queried for:
+A typical usage scenario for this script is:
 
-    { "document" : [
-      { "id" : "$id" }
-    ] }
+=over 4
 
-Have a look at the bottom of the L<daia-ubbielefeld.pl> example script for
-another example. As L<Plack::App::DAIA::Test> is work in progress, so is this
-script.
+=item
+
+You implement a DAIA server, for instance in C<myapp.psgi> and run it, for
+instance a C<http://localhost:5000/>.
+
+=item
+
+You write some test suites for the DAIA server, for instance in C<test1.txt>
+and C<test2.txt>. These tests are sets of document identifiers and (partial)
+responses which you expect your server to return. A description of the test
+format is given in L<Plack::App::DAIA::Test::Suite>.
+
+=item
+
+You run C<provedaia> as
+
+  provedaia --server myapp.psgi test1.txt test2.txt
+
+or as
+
+  provedaia --server http://localhost:5000/ test1.txt test2.txt
+
+If you server implementation contains its own test suite, you can also call
+
+  provedaia --combined myapp.psgi
+
+=back
 
 =cut

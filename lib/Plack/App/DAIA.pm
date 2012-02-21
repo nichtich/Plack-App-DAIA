@@ -125,7 +125,7 @@ To quickly hack a DAIA server you can also put all into C<app.psgi>:
     $app;
 
 This module contains a dummy application C<app.psgi> and a more detailed
-example L<daia-ubbielefeld.pl>.
+example C<examples/daia-ubbielefeld.pl>.
 
 =head1 DESCRIPTION
 

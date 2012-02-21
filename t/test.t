@@ -20,18 +20,3 @@ test_daia
 
 test_test("Plack::App::DAIA::Test works (at least a bit)");
 
-__END__
-daia_test_suite(<<SUITE);
-# bla
-http://daia.gbv.de/
-
-abc
-
-# invalid identifier warning
-{ "message": [ { "content" : "unknown identifier format" } ] }
-
-http://daia.gbv.de/isil/DE-Hil2
-ppn:16523315X
-{ "document" : [ ] }
-
-SUITE

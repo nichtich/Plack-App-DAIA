@@ -111,8 +111,14 @@ __END__
 218777
 http://katalog.ub.uni-bielefeld.de/title/218777
 
+base=http://katalog.ub.uni-bielefeld.de/title
+
 # found at least one item
-{ "document" : [ {
-    "id" : "http://katalog.ub.uni-bielefeld.de/title/218777",
+{ "document" : [ { } ] }
+
+# item must have the right URI
+{ "document" : [ { 
+    "id" : "$base/218777",
     "item": [ { } ]
-} ]}
+} ] }
+

@@ -1,5 +1,8 @@
 # Change file for Plack::App::DAIA
 
+0.44 2012-02-21
+    Moved daia_test_suite to provedaia in Plack::App::DAIA::Test::Suite
+
 0.43 2012-01-26
     Fixed a bug and introduced another example
     Introduced idformat check and provedaia script
