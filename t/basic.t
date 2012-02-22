@@ -31,4 +31,14 @@ test_psgi $app, sub {
         like( $daia->json, qr{"unknown identifier format"}m, "invalid identifier" );
     };
 
+$app = Plack::App::DAIA->new( code => sub { } ); # returns undef
+test_psgi $app, sub {
+        my $cb  = shift;
+
+        my $res = $cb->(GET "/?id=my:id&format=json");
+        my $daia = eval { DAIA::parse( $res->content ); };
+        is( $res->code, 500, "undefined response" );
+        ok( $daia, "empty response" );
+};
+
 done_testing;

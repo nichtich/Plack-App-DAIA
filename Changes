@@ -1,5 +1,8 @@
 # Change file for Plack::App::DAIA
 
+0.4? 2012-??-??
+    Added initalization hook
+
 0.44 2012-02-21
     Moved daia_test_suite to provedaia in Plack::App::DAIA::Test::Suite
 

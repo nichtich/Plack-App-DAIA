@@ -19,7 +19,12 @@ our $IDFORMAT = qr{^.*$};
 sub prepare_app {
     my $self = shift;
     $self->warnings(1) unless defined $self->warnings;
-    $self->idformat($IDFORMAT) unless defined $self->idformat
+    $self->idformat($IDFORMAT) unless defined $self->idformat;
+    $self->init;
+}
+
+sub init {
+    # initialization hook
 }
 
 sub call {
@@ -196,6 +201,11 @@ Must return a status and a L<DAIA::Response> object. Override this method
 if you derive an application from Plack::App::DAIA. By default it either
 calls the retrieve code, as passed to the constructor, or returns undef,
 so a HTTP 500 error is returned.
+
+=method init
+
+This method is called by Plack::Component::prepare_app, once before the first
+request. You can define this method in you subclass as initialization hook.
 
 =method as_psgi ( $status, $daia [, $format [, $callback ] ] )
 
