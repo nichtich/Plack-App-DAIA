@@ -12,16 +12,20 @@ use JSON;
 use DAIA;
 use Scalar::Util qw(blessed);
 
-use Plack::Util::Accessor qw(xsd xslt warnings code idformat);
+use Plack::Util::Accessor qw(xsd xslt warnings code idformat initialized);
 use Plack::Request;
 
 our %FORMATS  = DAIA->formats;
 
 sub prepare_app {
     my $self = shift;
+    return if $self->initialized;
+
     $self->warnings(1) unless defined $self->warnings;
     $self->idformat(qr{^.*$}) unless defined $self->idformat;
     $self->init;
+
+    $self->initialized(1);
 }
 
 sub init {
@@ -205,6 +209,10 @@ retrieve method. For instance:
   
 will give you C<$parts{prefix}> and C<$parts{local}> in the retrieve method.
 
+=item initialized
+
+Stores whether the application had been initialized.
+
 =back
 
 =method retrieve ( $id [, %parts ] )
@@ -221,7 +229,8 @@ capturing groups from your identifier format.
 
 This method is called by Plack::Component::prepare_app, once before the first
 request. You can define this method in you subclass as initialization hook,
-for instance to set default option values.
+for instance to set default option values. Initialization during runtime can
+be triggered by setting C<initialized> to false.
 
 =method as_psgi ( $status, $daia [, $format [, $callback ] ] )
 

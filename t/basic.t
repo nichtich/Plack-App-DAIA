@@ -48,6 +48,7 @@ $app = Plack::App::DAIA->new( code => sub {
     my $daia = DAIA::Response->new;
     $daia->document( id => $parts{local} . ':' . $parts{prefix} );
 }, idformat => qr{ ^ (?<prefix>[a-z]+) : (?<local>.+) $ }x );
+
 test_psgi $app, sub {
         my $cb  = shift;
 
