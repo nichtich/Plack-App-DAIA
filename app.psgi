@@ -7,9 +7,12 @@ use Plack::App::DAIA::Validator;
     package MyDAIAServer;
     use parent 'Plack::App::DAIA';
 
-    my $idformat = qr{^[a-z0-9:]+$}i;
-
     no warnings 'redefine'; # because this is loaded multiple times
+
+    sub init {
+        shift->idformat(qr{^[a-z0-9:]+$}i);
+    }
+
     sub retrieve {
         my ($self, $id) = @_;
         my $daia = DAIA::Response->new();

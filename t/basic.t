@@ -8,6 +8,8 @@ use Plack::App::DAIA;
 use Plack::App::DAIA::Validator;
 use DAIA;
 
+use feature ':5.10';
+
 my $app = Plack::App::DAIA->new;
 
 test_psgi $app, sub {
@@ -39,6 +41,22 @@ test_psgi $app, sub {
         my $daia = eval { DAIA::parse( $res->content ); };
         is( $res->code, 500, "undefined response" );
         ok( $daia, "empty response" );
+};
+
+$app = Plack::App::DAIA->new( code => sub { 
+    my ($id, %parts) = @_;
+    my $daia = DAIA::Response->new;
+    $daia->document( id => $parts{local} . ':' . $parts{prefix} );
+}, idformat => qr{ ^ (?<prefix>[a-z]+) : (?<local>.+) $ }x );
+test_psgi $app, sub {
+        my $cb  = shift;
+
+        my $res = $cb->(GET "/?id=foo:bar&format=json");
+        is( $res->code, 200, "found" );
+
+        my $daia = eval { DAIA::parse( $res->content ); };
+        my ($doc) = $daia->document;
+        is( $doc->id, 'bar:foo', 'named capturing groups' );
 };
 
 done_testing;

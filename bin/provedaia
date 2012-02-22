@@ -10,7 +10,7 @@ use Pod::Usage;
 use Plack::App::DAIA::Test::Suite;
 use Test::More;
 
-my ($help,$version,$server,$end,$combined);
+my ($help,$version,$server,$end,$combined,$verbose);
 
 GetOptions(
     'help|?'   => \$help,
@@ -18,6 +18,7 @@ GetOptions(
     'version'  => \$version,
     'end'      => \$end,
     'combined' => \$combined,
+    'verbose'  => \$verbose,
 );
 pod2usage(-verbose => 1) if defined $help;
 
@@ -33,7 +34,9 @@ $end = 1 if $combined;
 foreach (@ARGV) {
     diag( $_ ) unless ref $_;
     $server = $_ if $combined;
-    eval { provedaia( $_, server => $server, end => $end ); };
+    eval { 
+        provedaia( $_, server => $server, end => $end, verbose => $verbose );
+    };
     fail( $@ ) if $@;
 }
 
@@ -49,6 +52,7 @@ provedaia [<OPTIONS>] [<FILES>]
    --server URL-or-file  set base URL of DAIA server or load PSGI script
    --end                 skip everything until __END__ in input
    --combined            use files as both, server and test suite
+   --verbose             more diagnostic messages
 
 =head1 DESCRIPTION
 

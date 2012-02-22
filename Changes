@@ -1,7 +1,8 @@
 # Change file for Plack::App::DAIA
 
-0.4? 2012-??-??
-    Added initalization hook
+0.45 2012-02-22
+    Added initalization hook and fixed a test suite bug
+    Added named capturing groups in idformat (requires Perl >= 5.10)
 
 0.44 2012-02-21
     Moved daia_test_suite to provedaia in Plack::App::DAIA::Test::Suite

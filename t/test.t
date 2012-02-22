@@ -19,4 +19,3 @@ test_daia
     'simple DAIA response';
 
 test_test("Plack::App::DAIA::Test works (at least a bit)");
-
