@@ -107,7 +107,16 @@ sub as_psgi {
 
 =head1 SYNOPSIS
 
-It is recommended to derive from this class:
+To quickly hack a DAIA server, create a simple C<app.psgi>:
+
+    use Plack::App::DAIA;
+
+    Plack::App::DAIA->new( code => sub {
+        my $id = shift;
+        # ...construct and return DAIA object
+    } );
+
+To create your own DAIA server, you should better derive from this class:
  
     package Your::App;
     use parent 'Plack::App::DAIA';
@@ -128,14 +137,21 @@ Then create an C<app.psgi> that returns an instance of your class:
     use Your::App;
     Your::App->new;
 
-To quickly hack a DAIA server you can also put all into C<app.psgi>:
+You can mix this application with L<Plack> middleware, for instance
+L<Plack::Middleware::JSONP> for support of C<callback> parameter:
 
-    use Plack::App::DAIA;
-    my $app = Plack::App::DAIA->new( code => sub {
-        my $id = shift;
-        # ...construct and return DAIA object
-    } );
-    $app;
+    use Plack:App::DAIA;
+    use Plack::Builder;
+
+    builder {
+        enable 'JSONP';
+        Plack::App::DAIA->new( code => sub {
+            # ...
+        } );
+    };
+   
+It is highly recommended to test your services! Testing is made as easy as
+possible with the L<provedaia> command line script.
 
 This module contains a dummy application C<app.psgi> and a more detailed
 example C<examples/daia-ubbielefeld.pl>.
@@ -227,10 +243,10 @@ capturing groups from your identifier format.
 
 =method init
 
-This method is called by Plack::Component::prepare_app, once before the first
-request. You can define this method in you subclass as initialization hook,
-for instance to set default option values. Initialization during runtime can
-be triggered by setting C<initialized> to false.
+This method is called by L<Plack::Component>::prepare_app, once before the
+first request. You can define this method in you subclass as initialization
+hook, for instance to set default option values. Initialization during runtime
+can be triggered by setting C<initialized> to false.
 
 =method as_psgi ( $status, $daia [, $format [, $callback ] ] )
 

@@ -17,7 +17,7 @@ use Plack::App::DAIA::Validator;
         my ($self, $id) = @_;
         my $daia = DAIA::Response->new();
 
-        $daia->document( id => $id );
+        eval { $daia->document( id => $id ); };
 
         return $daia;
     };
