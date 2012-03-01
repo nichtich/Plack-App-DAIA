@@ -1,5 +1,9 @@
 # Change file for Plack::App::DAIA
 
+0.50 2012-??-??
+    Fixed JSONP bug
+    Added content negotiation
+
 0.45 2012-02-22
     Added initalization hook and fixed a test suite bug
     Added named capturing groups in idformat (requires Perl >= 5.10)

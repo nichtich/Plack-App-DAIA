@@ -98,6 +98,8 @@ sub as_psgi {
             }
         }
         $content = $daia->xml( header => 1, xmlns => 1, ( $self->xslt ? (xslt => $self->xslt) : () )  );
+    } elsif ( $type =~ qr{^application/javascript} and ($callback || '') =~ /^[\w\.\[\]]+$/ ) {
+        $content = "$callback($content)";
     }
 
     return [ $status, [ "Content-Type" => $type ], [ encode('utf8',$content) ] ];
@@ -137,18 +139,7 @@ Then create an C<app.psgi> that returns an instance of your class:
     use Your::App;
     Your::App->new;
 
-You can mix this application with L<Plack> middleware, for instance
-L<Plack::Middleware::JSONP> for support of C<callback> parameter:
-
-    use Plack:App::DAIA;
-    use Plack::Builder;
-
-    builder {
-        enable 'JSONP';
-        Plack::App::DAIA->new( code => sub {
-            # ...
-        } );
-    };
+You can also mix this application with L<Plack> middleware.
    
 It is highly recommended to test your services! Testing is made as easy as
 possible with the L<provedaia> command line script.
@@ -253,12 +244,8 @@ can be triggered by setting C<initialized> to false.
 Serializes a L<DAIA::Response> in some DAIA serialization format (C<xml> by
 default) and returns a a PSGI response with given HTTP status code.
 
-=method call
-
-Core method of the L<Plack::Component>. You should not need to override this.
-
 =head1 SEE ALSO
 
-L<Plack::App::DAIA::Validator>, L<Plack::DAIA::Test>.
+L<Plack::App::DAIA::Validator> and L<Plack::DAIA::Test>.
 
 =cut

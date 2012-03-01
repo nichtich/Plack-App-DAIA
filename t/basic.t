@@ -23,7 +23,14 @@ test_psgi $app, sub {
         $res = $cb->(GET "/?id=abc&format=json");
         $daia = eval { DAIA::parse_json( $res->content ); };
         isa_ok( $daia, 'DAIA::Response' );
-        
+
+        $res = $cb->(GET "/?id=abc&format=json&callback=xyz");
+        my $jsonp = $res->content;
+        like( $jsonp, qr{xyz\(.+\)\s*$}ms, 'JSONP callback' );
+        $jsonp =~ s{xyz\((.+)\)\s*$}{$1}ms;
+        $daia = eval { DAIA::parse_json( $jsonp ); };
+        isa_ok( $daia, 'DAIA::Response' );
+       
         $res = $cb->(GET "/?id=x");
         $daia = eval { DAIA::parse( $res->content ); };
         like( $daia->json, qr{"please provide an explicit parameter format=xml"}m, "missing format" );
