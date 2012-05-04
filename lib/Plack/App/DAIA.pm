@@ -12,7 +12,10 @@ use JSON;
 use DAIA;
 use Scalar::Util qw(blessed);
 
-use Plack::Util::Accessor qw(xsd xslt warnings code idformat initialized);
+use Plack::Util::Accessor qw(xsd xslt warnings code idformat initialized html);
+use Plack::Middleware::Static;
+use File::ShareDir qw(dist_dir);
+
 use Plack::Request;
 
 our %FORMATS  = DAIA->formats;
@@ -23,6 +26,15 @@ sub prepare_app {
 
     $self->warnings(1) unless defined $self->warnings;
     $self->idformat(qr{^.*$}) unless defined $self->idformat;
+
+    if ($self->html) {
+        $self->html( Plack::Middleware::Static->new(
+            path => qr{daia\.(xsl|css)$|xmlverbatim\.xsl$|icon/[a-z0-9_-]+\.png$},
+            root => dist_dir('Plack-App-DAIA')
+        ));
+        $self->xslt( '/daia.xsl' ) unless $self->xslt; # TODO: fix base path
+    }
+
     $self->init;
 
     $self->initialized(1);
@@ -39,6 +51,13 @@ sub call {
     my $id = $req->param('id') // '';
     my $invalid_id = '';
     my %parts;
+
+    if ( $self->html and $id eq '' ) {
+        my $resp = $self->html->_handle_static( $env );
+        if ($resp and $resp->[0] eq 200) {
+            return $resp;
+        }
+    }
 
     if ( $id ne '' and ref $self->idformat ) {
         if ( ref $self->idformat eq 'Regexp' ) {
@@ -186,7 +205,14 @@ Creates a new DAIA server. Supported options are
 
 =item xslt
 
-Path of a DAIA XSLT client to attach to DAIA/XML responses.
+Path of a DAIA XSLT client to attach to DAIA/XML responses. Not required if
+option "html" is set.
+
+=item html
+
+Enable HTML client for DAIA/XML via XSLT. The client is returned in form of
+three files (C<daia.xsl>, C<daia.css>, C<xmlverbatim.xsl>) and approriate
+icons, that are all shipped with this module.
 
 =item xsd
 

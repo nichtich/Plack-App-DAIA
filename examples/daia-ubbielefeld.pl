@@ -17,7 +17,8 @@ BEGIN { eval { use pQuery; }; $pQuery = !$@; };
 
 my $app = Plack::App::DAIA->new( 
     code     => \&retrieve,
-    idformat => qw{^(http://katalog.ub.uni-bielefeld.de/title/)?[0-9]+$}
+    idformat => qw{^(http://katalog.ub.uni-bielefeld.de/title/)?[0-9]+$},
+    html     => 1,
 );
 
 sub retrieve {
