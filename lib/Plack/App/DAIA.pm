@@ -27,15 +27,15 @@ sub prepare_app {
     $self->warnings(1) unless defined $self->warnings;
     $self->idformat(qr{^.*$}) unless defined $self->idformat;
 
+    $self->init;
+
     if ($self->html) {
         $self->html( Plack::Middleware::Static->new(
-            path => qr{daia\.(xsl|css)$|xmlverbatim\.xsl$|icon/[a-z0-9_-]+\.png$},
+            path => qr{daia\.(xsl|css)$|xmlverbatim\.xsl$|icons/[a-z0-9_-]+\.png$},
             root => dist_dir('Plack-App-DAIA')
         ));
-        $self->xslt( '/daia.xsl' ) unless $self->xslt; # TODO: fix base path
+        $self->xslt( 'daia.xsl' ) unless $self->xslt; # TODO: fix base path
     }
-
-    $self->init;
 
     $self->initialized(1);
 }
@@ -137,7 +137,7 @@ To quickly hack a DAIA server, create a simple C<app.psgi>:
         # ...construct and return DAIA object
     } );
 
-To create your own DAIA server, you should better derive from this class:
+However, you should better derive from this class:
  
     package Your::App;
     use parent 'Plack::App::DAIA';
@@ -176,15 +176,15 @@ serialization formats are supported by default:
 
 =over 4
 
-=item xml
+=item B<xml>
 
 DAIA/XML format (default)
 
-=item json
+=item B<json>
 
 DAIA/JSON format
 
-=item rdfjson
+=item B<rdfjson>
 
 DAIA/RDF in RDF/JSON.
 
@@ -210,9 +210,9 @@ option "html" is set.
 
 =item html
 
-Enable HTML client for DAIA/XML via XSLT. The client is returned in form of
-three files (C<daia.xsl>, C<daia.css>, C<xmlverbatim.xsl>) and approriate
-icons, that are all shipped with this module.
+Enable a HTML client for DAIA/XML via XSLT. The client is returned in form of
+three files (C<daia.xsl>, C<daia.css>, C<xmlverbatim.xsl>) and DAIA icons,
+all shipped together with this module.
 
 =item xsd
 

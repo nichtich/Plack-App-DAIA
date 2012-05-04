@@ -7,6 +7,7 @@
 
     Recent changes:
 
+      2012-05-05: minor layout changes
       2011-11-07: also show links to documents and items
       2011-09-28: show empty documents and href in institution and document
       2011-01-26: link ids if they are URLs
@@ -102,13 +103,26 @@
           <xsl:apply-templates select="d:document"/>
         </xsl:when>
         <xsl:otherwise>
-          <h2>Documents (<xsl:value-of select="count($docs)"/>)</h2>
-          <xsl:for-each select="d:document">
-            <div class='document'>
-              <h3>Document</h3>
-              <xsl:apply-templates select="."/>
-            </div>
-          </xsl:for-each>
+          <h2><xsl:value-of select="count($docs)"/> documents</h2>
+          <ul>
+            <xsl:for-each select="d:document">
+              <li>
+                <xsl:if test="d:item">
+                  <b>
+                    <xsl:value-of select="count(d:item)"/>
+                    <xsl:text> item</xsl:text>
+                    <xsl:if test="count(d:item) &gt; 1">s</xsl:if>
+                  </b>
+                  <xsl:text> of document </xsl:text>
+                  <xsl:apply-templates select="." mode="about"/>
+                </xsl:if>
+                <xsl:if test="not(d:item)">
+                  <xsl:apply-templates select="." mode="about"/>
+                  <xsl:apply-templates select="d:message"/>
+                </xsl:if>
+              </li>
+            </xsl:for-each>
+          </ul>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
@@ -174,26 +188,6 @@
         </xsl:apply-templates>
       </xsl:for-each>
     </xsl:for-each>
-  </xsl:template>
-
-  <xsl:template match="d:document">
-    <p>
-      <xsl:if test="d:item">
-        <xsl:text>The response contains information about </xsl:text>
-        <b>
-          <xsl:value-of select="count(d:item)"/>
-          <xsl:text> item</xsl:text>
-          <xsl:if test="count(d:item) &gt; 1">s</xsl:if>
-        </b>
-        <xsl:text> of document </xsl:text>
-        <xsl:apply-templates select="." mode="about"/>
-        <xsl:text>.</xsl:text>
-      </xsl:if>
-    </p>
-    <xsl:if test="not(d:item)">
-      <xsl:apply-templates select="." mode="about"/>
-      <xsl:apply-templates select="d:message"/>
-    </xsl:if>
   </xsl:template>
 
   <!-- show the general status (available|unavailable|cur-unavail) -->
@@ -487,14 +481,16 @@
       <xsl:when test="$content">
         <span><xsl:value-of select="$content"/></span>
       </xsl:when>
+      <xsl:when test="$nid and $href and substring-before(@id,':') != 'http'">
+        <a href="{$href}"><xsl:call-template name="id"/></a>
+      </xsl:when>
       <xsl:when test="$nid and $href">
         <xsl:call-template name="id"/>
-        <xsl:text> (</xsl:text>
-        <a href="{$href}">link</a>
-        <xsl:text>)</xsl:text>
+        <xsl:text>&#xA0;</xsl:text>
+        <a href="{$href}">URL</a>
       </xsl:when>
       <xsl:when test="$nid">
-        <span class="id"><xsl:call-template name="id"/></span>
+        <xsl:call-template name="id"/>
       </xsl:when>
       <xsl:when test="$href">
         <!-- TODO: use other default content instead of $href -->
@@ -506,7 +502,7 @@
     </xsl:choose>
     <xsl:if test="$content and $nid">
       <xsl:text>&#xA;</xsl:text>
-        <div class="id"><xsl:call-template name="id"/></div>
+        <div><xsl:call-template name="id"/></div>
     </xsl:if>
   </xsl:template>
 
@@ -514,11 +510,11 @@
   <xsl:template name="id">
     <xsl:choose>
       <xsl:when test="substring-before(@id,':') = 'http'">
-        <a href="{@id}"><xsl:value-of select="@id"/></a>
+        <a href="{@id}" class="id"><xsl:value-of select="@id"/></a>
       </xsl:when>
       <!-- minimal URI check -->
       <xsl:when test="substring-before(@id,':')">
-        <xsl:value-of select="@id"/>
+        <span class="id"><xsl:value-of select="@id"/></span>
       </xsl:when>
       <xsl:when test="normalize-space(@id)">
         <span class='invalid-id'><xsl:value-of select="@id"/></span>

@@ -7,7 +7,7 @@ use CGI qw(:standard);
 use Encode;
 
 use parent 'Plack::App::DAIA';
-use Plack::Util::Accessor qw(xsd xslt warnings);
+use Plack::Util::Accessor qw(xsd xslt warnings html);
 
 our ($FORMATS);
 BEGIN {

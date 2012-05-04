@@ -10,7 +10,8 @@ use Plack::App::DAIA::Validator;
     no warnings 'redefine'; # because this is loaded multiple times
 
     sub init {
-        shift->idformat(qr{^[a-z0-9:]+$}i);
+        $_[0]->idformat(qr{^[a-z0-9:]+$}i);
+        $_[0]->html(1);
     }
 
     sub retrieve {
@@ -28,7 +29,7 @@ use Plack::App::DAIA::Validator;
 my $app = MyDAIAServer->new;
 
 builder {
-    mount '/validator' => Plack::App::DAIA::Validator->new; 
+    mount '/validator' => Plack::App::DAIA::Validator->new( html => 1 ); 
     mount '/' => $app;
 };
 

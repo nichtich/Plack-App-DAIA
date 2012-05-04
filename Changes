@@ -1,8 +1,9 @@
 # Change file for Plack::App::DAIA
 
-0.50 2012-??-??
+0.46 2012-05-04
     Fixed JSONP bug
     Added content negotiation
+    Include XSLT client
 
 0.45 2012-02-22
     Added initalization hook and fixed a test suite bug
