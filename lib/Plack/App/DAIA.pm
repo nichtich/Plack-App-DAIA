@@ -270,6 +270,8 @@ default) and returns a a PSGI response with given HTTP status code.
 
 =head1 SEE ALSO
 
-L<Plack::App::DAIA::Validator>, L<Plack::DAIA::Test>, and C<Plack::Component>
+Plack::App::DAIA is derived from L<Plack::Component>. Use L<Plack::DAIA::Test>
+and L<provedaia> (using L<Plack::App::DAIA::Test::Suite>) for writing tests.
+See L<Plack::App::DAIA::Validator> for a DAIA validator and converter.
 
 =cut
