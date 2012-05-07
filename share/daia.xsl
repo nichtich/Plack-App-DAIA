@@ -7,7 +7,7 @@
 
     Recent changes:
 
-      2012-05-05: minor layout changes
+      2012-05-07: minor layout changes
       2011-11-07: also show links to documents and items
       2011-09-28: show empty documents and href in institution and document
       2011-01-26: link ids if they are URLs
@@ -100,26 +100,16 @@
       <xsl:choose>
         <xsl:when test="count($docs) = 1">
           <h2>Document</h2>
-          <xsl:apply-templates select="d:document"/>
+          <p>
+            <xsl:apply-templates select="d:document" mode="short"/>
+          </p>
         </xsl:when>
         <xsl:otherwise>
           <h2><xsl:value-of select="count($docs)"/> documents</h2>
           <ul>
             <xsl:for-each select="d:document">
               <li>
-                <xsl:if test="d:item">
-                  <b>
-                    <xsl:value-of select="count(d:item)"/>
-                    <xsl:text> item</xsl:text>
-                    <xsl:if test="count(d:item) &gt; 1">s</xsl:if>
-                  </b>
-                  <xsl:text> of document </xsl:text>
-                  <xsl:apply-templates select="." mode="about"/>
-                </xsl:if>
-                <xsl:if test="not(d:item)">
-                  <xsl:apply-templates select="." mode="about"/>
-                  <xsl:apply-templates select="d:message"/>
-                </xsl:if>
+                <xsl:apply-templates select="." mode="short"/>
               </li>
             </xsl:for-each>
           </ul>
@@ -158,6 +148,22 @@
 
     </xsl:if>
   </xsl:template>
+
+  <xsl:template match="d:document" mode="short">
+    <xsl:if test="d:item">
+      <b>
+        <xsl:value-of select="count(d:item)"/>
+        <xsl:text> item</xsl:text>
+        <xsl:if test="count(d:item) &gt; 1">s</xsl:if>
+      </b>
+      <xsl:text> of document </xsl:text>
+      <xsl:apply-templates select="." mode="about"/>
+    </xsl:if>
+    <xsl:if test="not(d:item)">
+      <xsl:apply-templates select="." mode="about"/>
+      <xsl:apply-templates select="d:message"/>
+    </xsl:if>
+  </xsl:template>   
 
   <xsl:template match="d:document" mode="itemtable">
     <xsl:variable name="items_without_depid" select="d:item[not(d:department/@id)]"/>

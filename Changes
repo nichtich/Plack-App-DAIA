@@ -1,5 +1,8 @@
 # Change file for Plack::App::DAIA
 
+0.47 2012-06-07
+    Added XML Schema
+
 0.46 2012-05-04
     Fixed JSONP bug
     Added content negotiation

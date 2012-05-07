@@ -5,9 +5,13 @@ package Plack::App::DAIA::Validator;
 
 use CGI qw(:standard);
 use Encode;
+use File::ShareDir qw(dist_dir);
+use File::Spec::Functions qw(catfile);
 
 use parent 'Plack::App::DAIA';
 use Plack::Util::Accessor qw(xsd xslt warnings html);
+
+our $HAS_LIBXML = 0;
 
 our ($FORMATS);
 BEGIN {
@@ -22,6 +26,14 @@ BEGIN {
     $FORMATS->{rdfxml}   = 'DAIA/RDF (RDF/XML)'  if $FORMATS->{rdfxml};
     foreach (qw(dot svg)) {
         $FORMATS->{$_} = "DAIA/RDF graph ($_)" if $FORMATS->{$_}; 
+    }
+}
+
+sub init {
+    my $self = shift;
+    if ($self->xsd) {
+        eval "use XML::LibXML";
+        $HAS_LIBXML = !$@;
     }
 }
 
@@ -99,13 +111,14 @@ sub call {
     label, .error, .msg { font-weight: bold; }
     .submit, .error { font-size: 120%; }
     .error { color: #A00; margin: 1em; }
+    .ok { color: #0A0; margin: 1em; }
     .msg { color: #0A0; margin: 1em; }
     .footer { font-size: small; margin: 1em; }
     #result { border: 1px dotted #666; margin: 1em; padding: 0.5em; }
   </style>
 </head>
 <body>
-<h1 id='top'>DAIA Converter</h1>
+<h1 id='top'>DAIA Validator/Converter</h1>
 <p>Convert and Validate <a href="http://purl.org/NET/DAIA">DAIA response format</a></p>
 <form method="post" accept-charset="utf-8" action="">
 HTML
@@ -139,24 +152,29 @@ HTML
       if ( $informat eq 'xml' or DAIA::guess($data) eq 'xml' ) {
         # TODO: move this into module DAIA (validate option when parsing)
         my ($schema, $parser); 
-        eval { require XML::LibXML; };
-        if ( $@ ) {
-            $error = "XML::LibXML::Schema required to validate DAIA/XML";
-        } elsif($xsd) {
-            $parser = XML::LibXML->new;
-            $schema = eval { XML::LibXML::Schema->new( location => $xsd ); };
-            if ($schema) {
-                my $doc = $parser->parse_string( $data );
-                eval { $schema->validate($doc) };
-                $error = "DAIA/XML not valid but parseable: " . $@ if $@;
+        if ($xsd) {
+            if (!$HAS_LIBXML) {
+                $error = "XML::LibXML not found - validating skipped";
             } else {
-                $error = "Could not load XML Schema - validating was skipped";
+                $parser = XML::LibXML->new;
+                $schema = eval { 
+                    XML::LibXML::Schema->new( 
+                        location => catfile(dist_dir('Plack-App-DAIA'),'daia.xsd')
+                    ); 
+                };
+                if ($schema) {
+                    my $doc = $parser->parse_string( $data );
+                    eval { $schema->validate($doc) };
+                    $error = "DAIA/XML not valid but parseable: " . $@ if $@;
+                } else {
+                    $error = "Could not load XML Schema - validating skipped";
+                }
             }
         }
         if ( $error ) {
           $html .= "<p class='error'>".escapeHTML($error)."</p>";
         } else {
-          $html .= p("DAIA/XML valid according to ".a({href=>$xsd},"this XML Schema"));
+          $html .= "<p class='ok'>DAIA/XML valid according to ".a({href=>$xsd},"this XML Schema")."</p>";
         }
       } else {
          $html .= p("validation is rather lax so the input may be invalid - but it was parseable");
@@ -204,6 +222,7 @@ HTML
         enable 'JSONP';
         Plack::App::DAIA::Validator->new( 
             xsd      => $location_of_daia_xsd,
+            html     => 1,
             xslt     => "/daia.xsl",
             warnings => 1
         );
@@ -219,6 +238,8 @@ L<LWP::Protocol::https> version 6.02 or higher.
 
 =head1 CONFIGURATION
 
-All configuration parameters (C<xsd>, C<xslt>, and C<warnings>) are optional.
+See L<Plack::App::DAIA> for documentation of options C<xslt>, C<html>,
+C<warnings>, and C<xsd>. L<XML::LibXML> must be installed if C<xsd> is set to
+validate DAIA/XML.
 
 =cut
