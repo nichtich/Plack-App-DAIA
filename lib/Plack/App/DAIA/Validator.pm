@@ -32,6 +32,7 @@ BEGIN {
 sub init {
     my $self = shift;
     if ($self->xsd) {
+        ## no critic
         eval "use XML::LibXML";
         $HAS_LIBXML = !$@;
     }
