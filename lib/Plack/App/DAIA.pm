@@ -3,7 +3,7 @@ use warnings;
 package Plack::App::DAIA;
 #ABSTRACT: DAIA Server as Plack application
 
-use feature ':5.10';
+use v5.10.1;
 
 use parent 'Plack::Component';
 use LWP::Simple qw(get);
@@ -70,7 +70,7 @@ sub call {
         }
     }
 
-    my $format = lc($req->param('format')) || "";
+    my $format = lc($req->param('format') || "");
 
     if (!$format) {
         # TODO: guess format via content negotiation
