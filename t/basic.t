@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use v5.10.1;
 use Test::More;
 use Plack::Test;
 use HTTP::Request::Common;
@@ -7,8 +8,6 @@ use HTTP::Request::Common;
 use Plack::App::DAIA;
 use Plack::App::DAIA::Validator;
 use DAIA;
-
-use feature ':5.10';
 
 my $app = Plack::App::DAIA->new;
 

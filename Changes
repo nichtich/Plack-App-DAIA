@@ -1,5 +1,9 @@
 # Change file for Plack::App::DAIA
 
+0.48 2013-01-10
+    Added option 'errors' and method IDFORMAT
+    Improved tests and removed warning
+
 0.47 2012-06-07
     Added XML Schema
 

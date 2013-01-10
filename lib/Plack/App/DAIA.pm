@@ -12,7 +12,7 @@ use JSON;
 use DAIA;
 use Scalar::Util qw(blessed);
 
-use Plack::Util::Accessor qw(xslt warnings code idformat initialized html);
+use Plack::Util::Accessor qw(xslt warnings errors code idformat initialized html);
 use Plack::Middleware::Static;
 use File::ShareDir qw(dist_dir);
 
@@ -24,8 +24,9 @@ sub prepare_app {
     my $self = shift;
     return if $self->initialized;
 
-    $self->warnings(1) unless defined $self->warnings;
-    $self->idformat(qr{^.*$}) unless defined $self->idformat;
+    $self->errors(0) unless defined $self->errors;
+    $self->warnings(1) if $self->errors or not defined $self->warnings;
+    $self->idformat( $self->IDFORMAT) unless defined $self->idformat;
 
     $self->init;
 
@@ -44,14 +45,16 @@ sub init {
     # initialization hook
 }
 
+sub IDFORMAT { qr{^.*$} };
+
 sub call {
     my ($self, $env) = @_;
     my $req = Plack::Request->new($env);
 
-    my $id = $req->param('id') // '';
-    my $invalid_id = '';
-    my %parts;
+    my $id     = $req->param('id') // '';
+    my $format = lc($req->param('format') // '');
 
+    # serve HTML client
     if ( $self->html and $id eq '' ) {
         my $resp = $self->html->_handle_static( $env );
         if ($resp and $resp->[0] eq 200) {
@@ -59,6 +62,8 @@ sub call {
         }
     }
 
+    # validate identifier
+    my ($invalid_id, $message, %parts) = ('',undef);
     if ( $id ne '' and ref $self->idformat ) {
         if ( ref $self->idformat eq 'Regexp' ) {
             if ( $id =~ $self->idformat ) {
@@ -70,26 +75,28 @@ sub call {
         }
     }
 
-    my $format = lc($req->param('format') || "");
-
-    if (!$format) {
-        # TODO: guess format via content negotiation
-    }
-    
-    my $status = 200;
-    my $daia = $self->retrieve( $id, %parts );
-
-    if (!$daia) {
-        $daia = DAIA::Response->new;
-        $status = 500;
-    }
-
     if ( $self->warnings ) {
         if ( $invalid_id ne '' ) {
-            $daia->addMessage( 'en' => 'unknown identifier format', errno => 400 );
-        } elsif ( $id eq ""  ) {
-            $daia->addMessage( 'en' => 'please provide a document identifier', errno => 400 );
+            $message = 'unknown identifier format';
+        } elsif ( $id eq ''  ) {
+            $message = 'please provide a document identifier';
         }
+    }
+
+    # retrieve and construct response
+    my ($status, $daia) = (200, undef);
+    if ( $message and $self->errors ) {
+        $daia = DAIA::Response->new;
+    } else {
+        $daia = $self->retrieve( $id, %parts );
+        if (!$daia) {
+            $daia = DAIA::Response->new;
+            $status = 500;
+        }
+    }
+
+    if ( $message and $self->warnings ) {
+        $daia->addMessage( 'en' => $message, errno => 400 );
     }
 
     $self->as_psgi( $status, $daia, $format, $req->param('callback') );
@@ -128,74 +135,70 @@ sub as_psgi {
 
 =head1 SYNOPSIS
 
-To quickly hack a DAIA server, create a simple C<app.psgi>:
+Either derive from Plack::App::DAIA
 
-    use Plack::App::DAIA;
-
-    Plack::App::DAIA->new( code => sub {
-        my $id = shift;
-        # ...construct and return DAIA object
-    } );
-
-However, you should better derive from this class:
- 
     package Your::App;
     use parent 'Plack::App::DAIA';
 
-    sub retrieve {
-        my ($self, $id, %parts) = @_;
+    sub IDFORMAT { qr{^[a-z]+:.*$} }
 
-        # construct DAIA object (you must extend this in your application)
+    sub retrieve {
+        my ($self, $id, %idparts) = @_;
+
         my $daia = DAIA::Response->new;
+
+        # construct full response ...
 
         return $daia;
     };
 
     1;
 
-Then create an C<app.psgi> that returns an instance of your class:
+or pass a code reference as option C<code>:
 
-    use Your::App;
-    Your::App->new;
+    use Plack::App::DAIA;
 
-You can also mix this application with L<Plack> middleware.
-   
-It is highly recommended to test your services! Testing is made as easy as
-possible with the L<provedaia> command line script.
+    Plack::App::DAIA->new( 
+        code => sub {
+            my ($id, %idparts) = @_;
 
-This module contains a dummy application C<app.psgi> and a more detailed
-example C<examples/daia-ubbielefeld.pl>.
+            my $daia = DAIA::Response->new;
+
+            # construct full response ...
+            
+            return $daia;
+        },
+        idformat => qr{^[a-z]+:.*$}
+    );
 
 =head1 DESCRIPTION
 
-This module implements a L<DAIA> server as PSGI application. It provides 
-serialization in DAIA/XML and DAIA/JSON and automatically adds some warnings
-and error messages. The core functionality must be implemented by deriving
-from this class and implementing the method C<retrieve>. The following
-serialization formats are supported by default:
+This module implements a B<Document Availability Information API> (L<DAIA>)
+server as PSGI application. The application receives two URL parameters: 
 
 =over 4
 
-=item B<xml>
+=item B<id>
 
-DAIA/XML format (default)
+refers to the document to retrieve availability information. The id is parsed
+based on the L</idformat> option and passed to an internal L</retrieve> method,
+which must return a L<DAIA::Response> object.
 
-=item B<json>
+=item B<format>
 
-DAIA/JSON format
-
-=item B<rdfjson>
-
-DAIA/RDF in RDF/JSON.
+specifies a DAIA serialization format, that the resulting L<DAIA::Response> is
+returned in. By default the formats C<xml> (DAIA/XML, the default), C<json>
+(DAIA/JSON>, and C<rdfjson> (DAIA/RDF in RDF/JSON) are supported. Additional
+RDF serializations (C<rdfxml>, C<turtle>, and C<ntriples>) are supported if
+L<RDF::Trine> is installed. If L<RDF::NS> is installed, the RDF/Turtle output
+uses well-known namespace prefixes. Visual RDF graphs are supported with format
+C<svg> and C<dot> if L<RDF::Trine::Exporter::GraphViz> is installed and C<dot>
+is in C<$ENV{PATH}>.
 
 =back
 
-In addition you get DAIA/RDF in several RDF formats (C<rdfxml>, 
-C<turtle>, and C<ntriples> if L<RDF::Trine> is installed. If L<RDF::NS> is
-installed, you also get known namespace prefixes for RDF/Turtle format.
-Furthermore the output formats C<svg> and C<dot> are supported if
-L<RDF::Trine::Exporter::GraphViz> is installed to visualize RDF graphs 
-(you may need to make sure that C<dot> is in your C<$ENV{PATH}>).
+This module automatically adds some warnings and error messages and provides a simple
+HTML interface based on client side XSLT.
 
 =method new ( [%options] )
 
@@ -220,6 +223,11 @@ the DAIA XML Schema as C<daia.xsd>.
 
 Enable warnings in the DAIA response (enabled by default).
 
+=item errors
+
+Enable warnings and directly return a response without calling the retrieve
+method on error.
+
 =item code
 
 Code reference to the C<retrieve> method if you prefer not to create a
@@ -227,10 +235,11 @@ module derived from this module.
 
 =item idformat
 
-Optional regular expression to validate identifiers. Invalid identifiers
-are set to the empty string before they are passed to the C<retrieve>
-method. In addition an error message "unknown identifier format" is
-added to the response, if warnings are enabled.
+Optional regular expression to validate identifiers. Invalid identifiers are
+set to the empty string before they are passed to the C<retrieve> method. In
+addition an error message "unknown identifier format" is added to the response,
+if the option C<warnings> are enabled. If the option C<errors> is enabled,
+the C<retrieve> method is not called on error.
 
 It is recommended to use regular expressions with named capturing groups
 as introduced in Perl 5.10. The named parts are also passed to the
@@ -267,6 +276,20 @@ triggered by setting C<initialized> to false.
 
 Serializes a L<DAIA::Response> in some DAIA serialization format (C<xml> by
 default) and returns a a PSGI response with given HTTP status code.
+
+=method IDFORMAT
+
+Returns the default idformat for this module.
+
+=head1 EXAMPLES
+
+You can also mix this application with L<Plack> middleware.
+   
+It is highly recommended to test your services! Testing is made as easy as
+possible with the L<provedaia> command line script.
+
+This module contains a dummy application C<app.psgi> and a more detailed
+example C<examples/daia-ubbielefeld.pl>.
 
 =head1 SEE ALSO
 

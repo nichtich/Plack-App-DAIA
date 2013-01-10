@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use v5.10.1;
 package Plack::App::DAIA::Test;
 #ABSTRACT: Test DAIA Servers
 
@@ -26,7 +27,7 @@ sub test_daia {
         my $expected = shift;
         my $res = $app->retrieve($id);
         if (!_if_daia_check( $res, $expected, $test_name )) {
-            $@ = "The thing isa DAIA::Response" unless $@;
+            $@ = "retrieve method returned a DAIA::Response" unless $@;
             __PACKAGE__->builder->ok(0, $@);
         }
     }
@@ -50,7 +51,7 @@ sub test_daia_psgi {
                 $@ =~ s/\s*$//sg;
             }
             if (!_if_daia_check( $res, $expected, $test_name )) {
-                $@ = "No valid The thing isa DAIA::Response" unless $@;
+                $@ = "application returned a DAIA::Response" unless $@;
                 __PACKAGE__->builder->ok(0, $@);
             }
         };
@@ -131,7 +132,7 @@ sub _if_daia_check {
     test_daia_psgi
         sub {
             my $id = shift;
-            my $daia = DAIA::Response->new();
+            my $daia = DAIA::Response->new;
             ...
             return $daia;
         },
@@ -154,8 +155,9 @@ L<DAIA::Response> object on success (C<$_> is also set to this response).
 
 =method test_daia ( $app, $id1 => sub { }, $id2 => ...  )
 
-Calls a DAIA server C<$app>'s request method with one or more identifiers,
-each given a test function.
+Calls a DAIA server C<$app>'s retrieve method with one or more identifiers,
+each given a test function. This does not add warnings and the error option
+is ignored (use test_daia_psgi instead if needed).
 
 =method test_daia_psgi ( $app, $id => sub { }, $id => ...  )
 
