@@ -19,6 +19,7 @@ use Plack::App::DAIA::Validator;
         my $daia = DAIA::Response->new();
 
         eval { $daia->document( id => $id ); };
+        $daia->addMessage( en => "You asked for $id" );
 
         return $daia;
     };
@@ -41,5 +42,4 @@ bar:456
 # the response must contain at least one document with the query id
 { "document" : [ { "id" : "$id" } ] }
 
-# warning message expected
-{ "message" : [ { "content" : "please provide an explicit parameter format=xml" } ] }
+{ "message" : [ { "content" : "You asked for $id" } ] }
