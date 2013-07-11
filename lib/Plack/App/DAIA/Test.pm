@@ -43,7 +43,7 @@ sub test_daia_psgi {
         my $id = shift;
         my $expected = shift;
         test_psgi $app, sub {
-            my $req = shift->(GET "/?id=".uri_escape($id));
+            my $req = shift->(GET "/?id=".uri_escape($id).'&format=xml');
             my $res = eval { DAIA::parse( $req->content ); };
             if ($@) {
                 $@ =~ s/DAIA::([A-Z]+::)?[a-z_]+\(\)://ig;

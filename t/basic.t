@@ -29,7 +29,7 @@ test_psgi $app, sub {
         $jsonp =~ s{xyz\((.+)\)\s*$}{$1}ms;
         $daia = eval { DAIA::parse_json( $jsonp ); };
         isa_ok( $daia, 'DAIA::Response' );
-       
+
         $res = $cb->(GET "/?id=x");
         $daia = eval { DAIA::parse( $res->content ); };
         like( $daia->json, qr{"please provide an explicit parameter format=xml"}m, "missing format" );
@@ -49,7 +49,7 @@ test_psgi $app, sub {
         ok( $daia, "empty response" );
 };
 
-$app = Plack::App::DAIA->new( code => sub { 
+$app = Plack::App::DAIA->new( code => sub {
     my ($id, %parts) = @_;
     my $daia = DAIA::Response->new;
     $daia->document( id => $parts{local} . ':' . $parts{prefix} );

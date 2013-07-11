@@ -1,7 +1,10 @@
 package SampleDAIAApp;
 use parent 'Plack::App::DAIA';
 
-sub IDFORMAT { qr{^foo:.+} };
+sub init {
+    my $self = shift;
+    $self->idformat( qr{^foo:.+} ) unless $self->idformat;
+}
 
 sub retrieve {
     my ($self, $id, %idparts) = @_;
