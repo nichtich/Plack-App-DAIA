@@ -14,6 +14,7 @@ use Plack::App::DAIA;
 use Scalar::Util qw(reftype blessed);
 use HTTP::Request::Common;
 use Test::JSON::Entails;
+use JSON;
 
 sub test_daia {
     my $app = daia_app(shift) || do {
@@ -96,7 +97,8 @@ sub _if_daia_check {
             $expected->($daia);
         } else {
             local $Test::Builder::Level = $Test::Builder::Level + 2;
-            entails $daia->json, $expected, $test_name;
+            my $json = decode_json( $daia->json );
+            entails $json, $expected, $test_name;
         }
         return $daia;
     }
@@ -153,16 +155,17 @@ DAIA server as code reference or as instance of L<Plack::App::DAIA> and a list
 of request identifiers and testing code. The testing code is passed a valid
 L<DAIA::Response> object on success (C<$_> is also set to this response).
 
-=method test_daia ( $app, $id1 => sub { }, $id2 => ...  )
+=method test_daia ( $app, $id1 => $expected, $id2 => ...  )
 
 Calls a DAIA server C<$app>'s retrieve method with one or more identifiers,
-each given a test function. This does not add warnings and the error option
-is ignored (use test_daia_psgi instead if needed).
+each given a test function or an expected JSON structure to be tested with
+L<Test::JSON::Entails>. This does not add warnings and the error option is
+ignored (use test_daia_psgi instead if needed).
 
-=method test_daia_psgi ( $app, $id => sub { }, $id => ...  )
+=method test_daia_psgi ( $app, $id => $expected, $id => ...  )
 
 Calls a DAIA server C<$app> as L<PSGI> application with one or more
-identifiers, each given a test function.
+identifiers, each given a test function or an expected JSON structure.
 
 =method daia_app ( $plack_app_daia | $url | $code )
 
@@ -173,5 +176,7 @@ to be used internally only!
 =head1 SEE ALSO
 
 L<Plack::App::DAIA::Test::Suite> and L<provedaia>.
+
+=encoding utf8
 
 =cut

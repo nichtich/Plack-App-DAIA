@@ -1,5 +1,8 @@
 # Change file for Plack::App::DAIA
 
+0.51 2013-07-30
+    Use format=json in tests
+
 0.50 2013-07-11
     Added option 'safe' and removed method IDFORMAT
 

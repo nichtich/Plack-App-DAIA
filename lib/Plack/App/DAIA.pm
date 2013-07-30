@@ -311,4 +311,6 @@ Plack::App::DAIA is derived from L<Plack::Component>. Use L<Plack::DAIA::Test>
 and L<provedaia> (using L<Plack::App::DAIA::Test::Suite>) for writing tests.
 See L<Plack::App::DAIA::Validator> for a DAIA validator and converter.
 
+=encoding utf8
+
 =cut

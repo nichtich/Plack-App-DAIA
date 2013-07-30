@@ -10,6 +10,7 @@ use Test::More;
 use Plack::App::DAIA::Test;
 use Scalar::Util qw(reftype blessed);
 use Test::JSON::Entails;
+use JSON;
 use Carp;
 
 sub provedaia {
@@ -29,7 +30,7 @@ sub provedaia {
     } else {
         @lines = split /\n/, $suite;
     }
-    
+
     my $line = 0;
     my $comment = '';
     my $json = undef;
@@ -42,7 +43,7 @@ sub provedaia {
         $json ||= '{ }';
         my $server_name = $server;
         if ( $server !~ qr{^https?://}) {
-            no warnings 'redefine'; # we may load the same twice 
+            no warnings 'redefine'; # we may load the same twice
             $_ = Plack::Util::load_psgi($server);
             if ( ref($_) ) {
                 diag("loaded PSGI from $server");
@@ -60,6 +61,7 @@ sub provedaia {
             my $test_json = $json;
             $vars{id} = $id;
             $test_json =~ s/\$([a-z]+)/defined $vars{$1} ? $vars{$1} : "\$$1"/emg;
+            $test_json = decode_json($test_json);
             if (ref($server)) {
                 test_daia_psgi $server, $id => $test_json, $test_name;
             } else {
@@ -68,7 +70,7 @@ sub provedaia {
         }
     };
 
-    foreach (@lines) { 
+    foreach (@lines) {
         if ($args{end}) {
             $args{end} = 0 if /__END__/;
             next;
@@ -97,7 +99,7 @@ sub provedaia {
             }
             diag( "$key = $value" ) if $args{verbose};
         } elsif( $_ =~ qr/^\s*{/ ) {
-            $json = $_; 
+            $json = $_;
         } else { # identifier
             $comment = '';
             push @ids, $_;
@@ -181,10 +183,12 @@ L<Test::JSON::Entails>. Here is an example of a test suite:
 
   # the response must contain at least one document with the query id
   { "document" : [
-    { "id" : "$id" } 
+    { "id" : "$id" }
   ] }
 
 See the file C<app.psgi> and C<examples/daia-ubbielefeld.pl> for further
 examples of test suites included in server implementations.
+
+=encoding utf8
 
 =cut
