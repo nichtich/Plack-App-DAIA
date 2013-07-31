@@ -37,6 +37,11 @@ test_psgi $app, sub {
         $res = $cb->(GET "/?id=x\ny&format=xml");
         $daia = eval { DAIA::parse( $res->content ); };
         like( $daia->json, qr{"unknown identifier format"}m, "invalid identifier" );
+
+        $res = $cb->(GET "/?id=&format=XML");
+        $daia = eval { DAIA::parse( $res->content ); };
+        like( $daia->json, qr{"please provide a document identifier"}m, "missing identifier" );
+        unlike( $daia->json, qr{"please provide an explicit parameter format=xml"}m, "format given" );
     };
 
 $app = Plack::App::DAIA->new( code => sub { } ); # returns undef

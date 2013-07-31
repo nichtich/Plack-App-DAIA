@@ -16,6 +16,7 @@ use Plack::Util::Accessor qw(xslt warnings errors code idformat initialized html
 use Plack::Middleware::Static;
 use File::ShareDir qw(dist_dir);
 
+use Carp;
 use Plack::Request;
 
 our %FORMATS  = DAIA->formats;
@@ -29,13 +30,17 @@ sub prepare_app {
     $self->warnings(1) if $self->errors or not defined $self->warnings;
     $self->idformat( qr{^.*$} ) unless defined $self->idformat;
     $self->safe(1) unless defined $self->safe;
+    $self->xslt('daia.xsl') if ($self->xslt // '') =~ /^\d+$/ or (!$self->xslt && $self->html);
 
-    if ($self->html) {
+    if ($self->xslt) {
+        if ($self->html and !ref($self->html)) {
+            carp "html => 1 is deprecated, use xslt => 1 instead";
+            $self->html(0);
+        }
         $self->html( Plack::Middleware::Static->new(
             path => qr{daia\.(xsl|css|xsd)$|xmlverbatim\.xsl$|icons/[a-z0-9_-]+\.png$},
             root => dist_dir('Plack-App-DAIA')
-        ));
-        $self->xslt( 'daia.xsl' ) unless $self->xslt; # TODO: fix base path
+        )) unless $self->html;
     }
 
     $self->initialized(1);
@@ -218,18 +223,21 @@ Creates a new DAIA server. Supported options are
 
 =over 4
 
+=item code
+
+Code reference to the C<retrieve> method if you prefer not to create a
+module derived from this module.
+
 =item xslt
 
-Path of a DAIA XSLT client to attach to DAIA/XML responses. Not set by default
-and set to C<daia.xsl> if option C<html> is set. You still may need to adjust
-the path if your server rewrites the request path.
+Path of a DAIA XSLT client to attach to DAIA/XML responses (disabled by
+default).  Any numeric value will be set to C<daia.xsl>, so use C<< xslt => 1
+>> for enabling the default XSLT client. The default client is provided in form
+of three files (C<daia.xsl>, C<daia.css>, C<xmlverbatim.xsl>) and DAIA icons,
+all shipped together with this module. Enabling HTML client also enables
+serving the DAIA XML Schema as C<daia.xsd>.
 
-=item html
-
-Enable a HTML client for DAIA/XML via XSLT. The client is returned in form of
-three files (C<daia.xsl>, C<daia.css>, C<xmlverbatim.xsl>) and DAIA icons, all
-shipped together with this module. Enabling HTML client also enables serving
-the DAIA XML Schema as C<daia.xsd>.
+You may need to adjust the path if your server rewrites the request path.
 
 =item warnings
 
@@ -239,11 +247,6 @@ Enable warnings in the DAIA response (enabled by default).
 
 Enable warnings and directly return a response without calling the retrieve
 method on error.
-
-=item code
-
-Code reference to the C<retrieve> method if you prefer not to create a
-module derived from this module.
 
 =item idformat
 
