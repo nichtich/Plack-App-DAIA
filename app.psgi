@@ -11,7 +11,7 @@ use Plack::App::DAIA::Validator;
 
     sub init {
         $_[0]->idformat(qr{^[a-z0-9:]+$}i);
-        $_[0]->html(1);
+        $_[0]->xslt(1);
     }
 
     sub retrieve {
@@ -27,11 +27,9 @@ use Plack::App::DAIA::Validator;
 
 # Run the DAIA server at '/' and a validator at '/validator'
 
-my $app = MyDAIAServer->new;
-
 builder {
     mount '/validator' => Plack::App::DAIA::Validator->new( html => 1 ); 
-    mount '/' => $app;
+    mount '/' => MyDAIAServer->new->to_app;
 };
 
 __END__

@@ -27,7 +27,7 @@ my $app = sub {
 };
 
 test_out('ok 3 - $_ set');
-test_out('ok 4 - response passed isa DAIA::Response');
+test_out('ok 4 - \'response passed\' isa \'DAIA::Response\'');
 test_out('ok 5 - response has document');
 test_daia $app,
     'foo:bar' => sub { 

@@ -33,7 +33,7 @@ sub prepare_app {
     $self->xslt('daia.xsl') if ($self->xslt // '') =~ /^\d+$/ or (!$self->xslt && $self->html);
 
     if ($self->xslt) {
-        if ($self->html and !ref($self->html)) {
+        if (defined $self->html and !ref $self->html) {
             carp "html => 1 is deprecated, use xslt => 1 instead";
             $self->html(0);
         }
@@ -215,7 +215,7 @@ is in C<$ENV{PATH}>.
 =back
 
 This module automatically adds appropriate warnings and error messages. A
-simple HTML interface based on client side XSLT is added with option C<html>.
+simple HTML interface based on client side XSLT is added with option C<xslt>.
 
 =method new ( [%options] )
 
