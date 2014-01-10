@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package Plack::App::DAIA;
 #ABSTRACT: DAIA Server as Plack application
-
+#VERSION
 use v5.10.1;
 
 use parent 'Plack::Component';

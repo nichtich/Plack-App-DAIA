@@ -3,7 +3,7 @@ use warnings;
 use v5.10.1;
 package Plack::App::DAIA::Test;
 #ABSTRACT: Test DAIA Servers
-
+#VERSION
 use base 'Test::Builder::Module';
 our @EXPORT = qw(test_daia_psgi test_daia daia_app);
 

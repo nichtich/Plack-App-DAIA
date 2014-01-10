@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package Plack::App::DAIA::Validator;
 #ABSTRACT: DAIA validator and converter
-
+#VERSION
 use CGI qw(:standard);
 use Encode;
 use File::ShareDir qw(dist_dir);

@@ -21,3 +21,7 @@ requires 'Test::JSON::Entails';
 requires 'Test::More';
 requires 'Try::Tiny';
 requires 'URI::Escape';
+
+on test => sub {
+    requires 'Test::Warn';
+};

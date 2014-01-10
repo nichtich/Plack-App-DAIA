@@ -1,5 +1,9 @@
 # Change file for Plack::App::DAIA
 
+0.54 2014-01-??
+    Fixed test requirements and VERSION
+    Use cpanfile
+
 0.52 2013-07-31
     Use format=json in tests (fixed 0.51)
     Improved test coverage

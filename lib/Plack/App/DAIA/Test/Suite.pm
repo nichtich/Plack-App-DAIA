@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package Plack::App::DAIA::Test::Suite;
 #ABSTRACT: Test DAIA Servers via a test scripting language
-
+#VERSION
 use base 'Test::Builder::Module';
 our @EXPORT = qw(provedaia);
 
