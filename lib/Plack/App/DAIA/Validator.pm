@@ -9,7 +9,7 @@ use File::ShareDir qw(dist_dir);
 use File::Spec::Functions qw(catfile);
 
 use parent 'Plack::App::DAIA';
-use Plack::Util::Accessor qw(xsd xslt warnings html);
+use Plack::Util::Accessor qw(xsd xslt warnings);
 
 our $HAS_LIBXML = 0;
 
@@ -42,6 +42,10 @@ sub call {
     my ($self, $env) = @_;
     my $req = Plack::Request->new($env);
 
+    # serve parts of the XSLT client
+    my $res = $self->call_client($req);
+    return $res if $res;
+
     my $msg = "";
     my $error = "";
     my $url  = $req->param('url') || '';
@@ -53,8 +57,8 @@ sub call {
 
     my $xsd = $self->xsd;
 
-    my $informat  = lc($req->param('in'));
-    my $outformat = lc($req->param('out')) || lc($req->param('format')) || 'html';
+    my $informat  = lc($req->param('in') || '');
+    my $outformat = lc($req->param('out') || $req->param('format') || 'html');
 
     my $callback  = $req->param('callback') || "";
     $callback = "" unless $callback =~ /^[a-z][a-z0-9._\[\]]*$/i;
@@ -223,8 +227,6 @@ HTML
         enable 'JSONP';
         Plack::App::DAIA::Validator->new(
             xsd      => $location_of_daia_xsd,
-            html     => 1,
-            xslt     => "/daia.xsl",
             warnings => 1
         );
     };
@@ -239,9 +241,8 @@ L<LWP::Protocol::https> version 6.02 or higher.
 
 =head1 CONFIGURATION
 
-See L<Plack::App::DAIA> for documentation of options C<xslt>, C<html>,
-C<warnings>, and C<xsd>. L<XML::LibXML> must be installed if C<xsd> is set to
-validate DAIA/XML.
+See L<Plack::App::DAIA> for documentation of options C<xslt>, C<warnings>, and
+C<xsd>. L<XML::LibXML> must be installed if C<xsd> is set to validate DAIA/XML.
 
 =encoding utf8
 

@@ -6,7 +6,6 @@ use Plack::Test;
 use HTTP::Request::Common;
 
 use Plack::App::DAIA;
-use Plack::App::DAIA::Validator;
 use DAIA;
 
 my $app = Plack::App::DAIA->new;

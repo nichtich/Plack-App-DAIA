@@ -28,7 +28,7 @@ use Plack::App::DAIA::Validator;
 # Run the DAIA server at '/' and a validator at '/validator'
 
 builder {
-    mount '/validator' => Plack::App::DAIA::Validator->new( html => 1 ); 
+    mount '/validator' => Plack::App::DAIA::Validator->new();
     mount '/' => MyDAIAServer->new->to_app;
 };
 

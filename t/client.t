@@ -30,24 +30,24 @@ sub test_client (@) {
 
 test_client { } => [
     '/',
-    '!' => qr{<\?xml-stylesheet type="text/xsl" href="daia\.xsl"\?>}m,
-    "no default client"
+    qr{<\?xml-stylesheet type="text/xsl" href="daia\.xsl"\?>}m,
+    "default client"
 ];
 
-warning_like {
-    test_client { html => 1 } => [
-        '/',
-        qr{<\?xml-stylesheet type="text/xsl" href="daia\.xsl"\?>}m,
-        "default client"
-    ];
-} qr{html => 1}, "html => 1 is deprecated";
+test_client { xslt => 0 } => [
+    '/',
+    '!' => qr{<\?xml-stylesheet type="text/xsl" href="daia\.xsl"\?>}m,
+    "disabled client"
+];
 
 test_client { xslt => 1 } => [
-    "/",
+    '',
     qr{<\?xml-stylesheet type="text/xsl" href="daia\.xsl"\?>}m,
     "default client"
 ], [
-    '/daia.xsl' => qr{xsl:stylesheet}m, "client provided"
+    '/daia.xsl',
+   qr{xsl:stylesheet}m, 
+   "client provided"
 ];
 
 test_client { xslt => 'foo.xsl' } => [
@@ -55,7 +55,9 @@ test_client { xslt => 'foo.xsl' } => [
     qr{<\?xml-stylesheet type="text/xsl" href="foo\.xsl"\?>}m,
     "custom client"
 ], [
-    '/foo.xsl' => qr{<daia}m, "no client provided" # TODO: return 404 instead?
+    '/foo.xsl',
+    qr{<daia}m, 
+    "no client provided" # TODO: return 404 instead?
 ];
 
 done_testing;

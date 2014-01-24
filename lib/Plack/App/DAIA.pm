@@ -12,7 +12,7 @@ use JSON;
 use DAIA;
 use Scalar::Util qw(blessed);
 use Try::Tiny;
-use Plack::Util::Accessor qw(xslt warnings errors code idformat initialized html safe);
+use Plack::Util::Accessor qw(xslt root warnings errors code idformat initialized safe);
 use Plack::Middleware::Static;
 use File::ShareDir qw(dist_dir);
 
@@ -30,24 +30,28 @@ sub prepare_app {
     $self->warnings(1) if $self->errors or not defined $self->warnings;
     $self->idformat( qr{^.*$} ) unless defined $self->idformat;
     $self->safe(1) unless defined $self->safe;
-    $self->xslt('daia.xsl') if ($self->xslt // '') =~ /^\d+$/ or (!$self->xslt && $self->html);
+    $self->xslt('daia.xsl') if ($self->xslt // 1) eq 1;
 
-    if ($self->xslt) {
-        if (defined $self->html and !ref $self->html) {
-            carp "html => 1 is deprecated, use xslt => 1 instead";
-            $self->html(0);
-        }
-        $self->html( Plack::Middleware::Static->new(
-            path => qr{daia\.(xsl|css|xsd)$|xmlverbatim\.xsl$|icons/[a-z0-9_-]+\.png$},
-            root => dist_dir('Plack-App-DAIA')
-        )) unless $self->html;
-    }
+    $self->{client} = Plack::Middleware::Static->new(
+        path => qr{daia\.(xsl|css|xsd)$|xmlverbatim\.xsl$|icons/[a-z0-9_-]+\.png$},
+        root => ($self->root || dist_dir('Plack-App-DAIA'))
+    ) if $self->xslt;
 
     $self->initialized(1);
 }
 
 sub init {
     # initialization hook
+}
+
+sub call_client {
+    my ($self, $req) = @_;
+
+    if ( $self->{client} and $req->path ne '/' and !keys %{$req->parameters} ) {
+        return $self->{client}->_handle_static( $req->env );
+    } else {
+        return;
+    }
 }
 
 sub call {
@@ -57,13 +61,9 @@ sub call {
     my $id     = $req->param('id') // '';
     my $format = lc($req->param('format') // '');
 
-    # serve HTML client
-    if ( $self->html and $id eq '' ) {
-        my $resp = $self->html->_handle_static( $env );
-        if ($resp and $resp->[0] eq 200) {
-            return $resp;
-        }
-    }
+    # serve parts of the XSLT client
+    my $res = $self->call_client($req);
+    return $res if $res;
 
     # validate identifier
     my ($invalid_id, $error, %parts) = ('',undef);
@@ -230,14 +230,19 @@ module derived from this module.
 
 =item xslt
 
-Path of a DAIA XSLT client to attach to DAIA/XML responses (disabled by
-default).  Any numeric value will be set to C<daia.xsl>, so use C<< xslt => 1
->> for enabling the default XSLT client. The default client is provided in form
-of three files (C<daia.xsl>, C<daia.css>, C<xmlverbatim.xsl>) and DAIA icons,
-all shipped together with this module. Enabling HTML client also enables
-serving the DAIA XML Schema as C<daia.xsd>.
+Path of a DAIA XSLT client to attach to DAIA/XML responses. Set to C<daia.xsl>
+by default.  The default client is provided in form of three files
+(C<daia.xsl>, C<daia.css>, C<xmlverbatim.xsl>) and DAIA icons, all shipped
+together with this module. Enabling HTML client also enables serving the DAIA
+XML Schema as C<daia.xsd>.
+
+Set C<< xslt => 0 >> to disable the client.
 
 You may need to adjust the path if your server rewrites the request path.
+
+=item root
+
+Path of a directory with XSLT client files.
 
 =item warnings
 
